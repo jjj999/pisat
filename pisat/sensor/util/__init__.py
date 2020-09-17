@@ -1,0 +1,1 @@
+from pisat.sensor.util.gps_parser import GPSParser

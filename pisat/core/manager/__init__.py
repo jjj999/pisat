@@ -1,0 +1,1 @@
+from pisat.core.manager.component_manager import ComponentManager

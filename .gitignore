@@ -1,0 +1,6 @@
+.venv/
+.vscode/
+__pycache__/
+pisat/**/*.pyc
+Pipfile.lock
+_local.py

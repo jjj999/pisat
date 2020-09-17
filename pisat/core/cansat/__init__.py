@@ -1,0 +1,1 @@
+from pisat.core.cansat.cansat import CanSat

@@ -1,0 +1,13 @@
+#! python3
+
+"""
+
+DESCRIPTION
+
+[author]
+AUTHOR NAME, ORGANIZATION NAME
+
+[info]
+OTHER INFORMATION
+    
+"""
