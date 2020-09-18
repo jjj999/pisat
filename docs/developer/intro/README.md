@@ -10,8 +10,7 @@
 2. [pisat システムについて](./src/system.md)
 3. [pisat を利用した実装について](./src/implementation.md)
 4. [独自の拡張について](./src/self_expansion.md)
-5. [依存性の配布について](./src/dependancy_distribution.md)
-6. [pisat を使った例](./src/pisat_example.md)
+5. [pisat を使った例](./src/pisat_example.md)
 
 ## はじめに
 
