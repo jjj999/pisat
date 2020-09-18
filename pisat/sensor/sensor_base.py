@@ -677,7 +677,7 @@ class SensorBase(SensorInterface):
         in the constructor. 
     """
 
-    DATA_NAMES: tuple = ()
+    DATA_NAMES: Tuple[str] = ()
     DEFAULT_VALUES: Dict[str, Logable] = {}
 
     def __init__(self, 
