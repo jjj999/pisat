@@ -36,7 +36,7 @@ class PWMHandlerBase(DigitalIOHandlerBase):
     def freq(self):
         return self._freq
     
-    def set_duty(self, duty: float) -> None:
+    def set_duty(self, duty: Union[int, float]) -> None:
         pass
     
     def set_freq(self, freq: Union[int, float]) -> None:
