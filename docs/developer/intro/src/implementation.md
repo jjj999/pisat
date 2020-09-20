@@ -319,10 +319,10 @@ from pisat.core.nav import Node
 class TestNode(Node):
 
     def enter(self):
-        dlogger = self.manager.get_component("DataLogger")
+        self.dlogger = self.manager.get_component("DataLogger")
 
         # ignore retreiving data named 'PRESSURE'
-        dlogger.ignore(dname.PRESSURE)
+        self.dlogger.ignore(dname.PRESSURE)
 
     def judge(self, data):
         press = data.get(dname.PRESSURE)
@@ -331,7 +331,7 @@ class TestNode(Node):
 
     def exit(self):
         # reset all readabilities
-        dlogger.reset_all()
+        self.dlogger.reset_all()
 ```
 
 DataLogger の詳細は [pisat.core のドキュメント](../core/)を参照してください．
@@ -397,7 +397,7 @@ class TestNode(Node):
 
     def control(self):
         # ロックして内部のデータの deep copy を返す
-        data: Deque[Dict[str, Logable]] = self.ref.get()
+        data: Deque[Dict[str, Logable]] = self.refque.get()
 ```
 
 ### PostEvent
@@ -447,7 +447,7 @@ class TestNode(Node):
             return 0
 
     def control(self):
-        while self.event.is_set():
+        while not self.event.is_set():
             # move forward
             self.motor.cw(100)
             sleep(0.5)
