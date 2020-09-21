@@ -56,7 +56,7 @@ class PigpioSerialHandler(SerialHandlerBase):
         return self._handle
     
     @property
-    def in_waiting(self):
+    def counts_readable(self):
         self._pi.serial_data_available(self._handle)
         
     def close(self) -> None:

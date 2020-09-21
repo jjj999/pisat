@@ -76,29 +76,23 @@ class PyserialSerialHandler(SerialHandlerBase):
                                       write_timeout=write_timeout)
 
     @property
-    def in_waiting(self):
-        return self._handler.in_waiting
+    def counts_readable(self):
+        return self._serial.in_waiting
 
     @property
-    def out_waiting(self):
-        return self._handler.out_wating
+    def counts_writable(self):
+        return self._serial.out_waiting
 
     def read(self, count: int) -> Tuple[int, bytes]:
         if count < 0:
             raise ValueError(
                 "'count' must be no less than 0."
             )
-        res = self._handler.read(size=count)
+        res = self._serial.read(size=count)
         return (len(res), res)
-    
-    def readline(self, size: int = -1) -> bytes:
-        return self._serial.readline(size)
-    
-    def readlines(self, hint: int = -1) -> List[bytes]:
-        return self._serial.readlines(hint)
 
     def write(self, data: Union[bytes, bytearray]) -> None:
-        self._handler.write(data)
+        self._serial.write(data)
         
     def flush(self) -> None:
-        self._serial.flush
+        self._serial.flush()

@@ -32,7 +32,7 @@ class SerialHandlerBase(HandlerBase):
         return self._baudrate
     
     @property
-    def in_waiting(self):
+    def counts_readable(self):
         pass
     
     def close(self) -> None:
@@ -40,6 +40,30 @@ class SerialHandlerBase(HandlerBase):
     
     def read(self, count: int) -> Tuple[int, bytes]:
         pass
+    
+    def readline(self, end: bytes = b'\n') -> bytes:
+        result = bytearray()
+        while True:
+            count, char = self.read(1)
+            if count == 0 or char == end:
+                break
+            result.extend(char)
+            
+        return result
+    
+    def readlines(self, size: int = -1, end: bytes = b'\n') -> Tuple[bytes]:
+        result = []
+        if size < 0:
+            while True:
+                line = self.readline(end=end)
+                if not len(line):
+                    break
+                result.append(line)
+        else:
+            for _ in range(size):
+                result.append(self.readline(end=end))
+                
+        return result
     
     def write(self, data: Union[bytes, bytearray]) -> None:
         pass
