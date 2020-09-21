@@ -48,7 +48,7 @@ class Component:
         if self._name is None:
             return self.__class__.__name__
         else:
-            self._name
+            return self._name
             
     @name.setter
     def name(self, name: str):
