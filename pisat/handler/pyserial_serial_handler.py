@@ -68,7 +68,9 @@ class PyserialSerialHandler(SerialHandlerBase):
                  port: str,
                  baudrate: int = 115200,
                  read_timeout: Optional[float] = None,
-                 write_timeout: Optional[float] = None):
+                 write_timeout: Optional[float] = None,
+                 name: Optional[str] = None):
+        super().__init__(port, baudrate, name=name)
 
         self._serial: Serial = Serial(port,
                                       baudrate=baudrate,

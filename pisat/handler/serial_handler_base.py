@@ -43,13 +43,22 @@ class SerialHandlerBase(HandlerBase):
     
     def readline(self, end: bytes = b'\n') -> bytes:
         result = bytearray()
+        cursor = 0
+        tail = len(end)
         while True:
             count, char = self.read(1)
-            if count == 0 or char == end:
-                break
             result.extend(char)
             
-        return result
+            if ord(char) == end[cursor]:
+                cursor += 1
+                if cursor == tail:
+                    for _ in range(tail):
+                        result.pop()
+                    break
+            if not self.counts_readable:
+                break
+            
+        return bytes(result)
     
     def readlines(self, size: int = -1, end: bytes = b'\n') -> Tuple[bytes]:
         result = []
