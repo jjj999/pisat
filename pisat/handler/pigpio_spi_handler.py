@@ -31,7 +31,7 @@ class PigpioSPIHandler(SPIHandlerBase):
         CHANNEL_0 = 0
         CHANNEL_1 = 1
         CHANNEL_2 = 2
-        CHANNELS = (CHANNEL_0.value, CHANNEL_1.value, CHANNEL_2.value)
+        CHANNELS = (CHANNEL_0, CHANNEL_1, CHANNEL_2)
         
         @classmethod
         def is_valid(cls, channel: int) -> bool:

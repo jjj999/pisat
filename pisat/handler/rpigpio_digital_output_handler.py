@@ -1,10 +1,11 @@
 
 from typing import Optional
 
-from RPi import GPIO
-
+from pisat.util.platform import is_raspberry_pi
 from pisat.handler.digital_output_handler_base import DigitalOutputHandlerBase
 
+if is_raspberry_pi():
+    from RPi import GPIO
 
 class RpiGpioDigitalOutputHandler(DigitalOutputHandlerBase):
     

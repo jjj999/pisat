@@ -1,12 +1,13 @@
 
 from typing import Optional
-from enum import Enum
 
-from RPi import GPIO
-
+from pisat.util.platform import is_raspberry_pi
 from pisat.handler.pwm_handler_base import PWMHandlerBase
 from pisat.handler.rpigpio_digital_output_handler import RpiGpioDigitalOutputHandler
 
+if is_raspberry_pi():
+    from RPi import GPIO
+    
 
 class RpiGpioPWMHandler(PWMHandlerBase):            
     
