@@ -1,13 +1,25 @@
+#! python3
+
+"""
+
+pisat.comm.transceiver.im920
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+[author]
+Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
+
+TODO
+* address
+* docstring
+"""
 
 from collections import deque
 from enum import Enum, auto
 import codecs
-from time import time
-from pisat.handler.pyserial_serial_handler import PyserialSerialHandler
-from typing import Deque, List, Optional, Set, Tuple, Any, Union
+from typing import Deque, Optional, Set, Tuple, Union
 
+from pisat.handler.pyserial_serial_handler import PyserialSerialHandler
 from pisat.comm.transceiver.transceiver_base import TransceiverBase
-from pisat.handler.serial_handler_base import SerialHandlerBase
 from pisat.util.cached_property import cached_property
 
 
@@ -142,16 +154,20 @@ class Im920(TransceiverBase):
     def addr(self):
         return (self.id, )
 
+    # TODO implement the method
     @classmethod
     def check_addr(cls, address: Tuple[str]) -> bool:
-        """
-        if len(address) == cls.Packet.SIZE_ADDR.value:
-            for val in address:
-                if not isinstance(val, str):
-                    return False
-            return True
-        else:
-            return False
+        """Check if the given address is valid or not.
+
+        Parameters
+        ----------
+            address : Tuple[Any]
+                Address to be judged.
+
+        Returns
+        -------
+            bool
+                Whether the given address is valid or not.
         """
         return True
         
@@ -179,12 +195,33 @@ class Im920(TransceiverBase):
         return tuple(data.decode().split(cls.Packet.SEPARATOR_ADDR.value))
 
     def recv_raw(self) -> Tuple[Tuple[str], bytes]:
+        """Receive raw data from the transceiver.
+
+        Returns
+        -------
+            Tuple[Tuple[Any], bytes]
+                Address which data is from, and raw data.
+        """
         self._update_buf()
         if not len(self._buf):
             return ()
         return self._buf.pop()
 
     def send_raw(self, address: Tuple[str], data: Union[bytes, bytearray]) -> bool:
+        """Send raw data to the transceiver which has the given address.
+
+        Parameters
+        ----------
+            address : Tuple[Any]
+                Address to which the data is to be send.
+            data : Union[bytes, bytearray]
+                Data to be send.
+                
+        Returns
+        -------
+            bool
+                Whether the data is send certainly or not.
+        """
         self._send_formatted(self.Command.TRANSMIT_DATA_VARIABLE.value, data)
         return self._check_ok()
         

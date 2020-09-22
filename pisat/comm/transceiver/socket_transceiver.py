@@ -1,3 +1,21 @@
+#! python3
+
+"""
+
+pisat.comm.transceiver.socket_transceiver
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+The wrapper of transceivers to generate sockets 
+associated with the transceivers.
+This class wraps a given transceiver and makes 
+users get sockets combined with the transceiver, 
+which is like the 'socket' of python.
+
+[author]
+Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
+
+[info]
+pisat.comm.transceiver.CommSocket
+"""
 
 from collections import deque
 from enum import Enum
@@ -11,6 +29,18 @@ from pisat.comm.transceiver.comm_socket import CommSocket
 
 
 class SocketTransceiver(TransceiverBase):
+    """The wrapper of transceivers to generate sockets associated 
+    with the transceivers.
+    
+    This class wraps a given transceiver and makes 
+    users get sockets combined with the transceiver, 
+    which is like the 'socket' of python.
+    
+    See Also
+    --------
+        pisat.comm.transceiver.CommSocket : 
+            SocketTransceiver makes objects of the class.
+    """
     
     class Period(Enum):
         MIN = 0.
@@ -27,6 +57,25 @@ class SocketTransceiver(TransceiverBase):
                  period: float = 0.,
                  certain: bool = True,
                  name: Optional[str] = None) -> None:
+        """
+        Parameters
+        ----------
+            transceiver : TransceiverBase
+                Transceiver to be wrapped.
+            period : float, optional
+                Period for sending, by default 0.
+            certain : bool, optional
+                If the transceiver sends data certainly, by default True
+            name : Optional[str], optional
+                Name of the component, by default None
+
+        Raises
+        ------
+            TypeError
+                Raised if 'transceiver' is not TransceiverBase.
+            TypeError
+                Raised if 'certain' is not bool.
+        """
         super().__init__(handler=transceiver._handler,
                          address=transceiver._addr,
                          name=name)
@@ -70,15 +119,40 @@ class SocketTransceiver(TransceiverBase):
         return self._certain
     
     def certain_on(self) -> None:
+        """Make the transceiver send data certainly.
+        """
         self._certain = True
         
     def certain_off(self) -> None:
+        """Ignore whether the transceiver send data certainly.
+        """
         self._certain = False
         
     def create_socket(self, 
                       address: Tuple[Any], 
                       maxlen: Optional[int] = None, 
                       name: Optional[str] = None) -> CommSocket:
+        """Create CommSocket object associated with the transceiver.
+
+        Parameters
+        ----------
+            address : Tuple[Any]
+                Address of another socket to send data.
+            maxlen : Optional[int], optional
+                Size of bytes of the internal buffer, by default None
+            name : Optional[str], optional
+                Name of the socket as a component, by default None
+
+        Returns
+        -------
+            CommSocket
+                Socket associated with the transceiver.
+
+        Raises
+        ------
+            ValueError
+                Raised if the address is invalid.
+        """
         
         if not self._transceiver.check_addr(address):
             raise ValueError(
@@ -93,15 +167,55 @@ class SocketTransceiver(TransceiverBase):
         return socket
         
     def check_addr(self, address: Tuple[Any]) -> bool:
+        """Check if the given address is valid or not.
+
+        Parameters
+        ----------
+            address : Tuple[Any]
+                Address to be judged.
+
+        Returns
+        -------
+            bool
+                Whether the given address is valid or not.
+        """
         return self._transceiver.check_addr(address)
     
     def recv_raw(self) -> Tuple[Tuple[Any], bytes]:
+        """Receive raw data from wrapped transceiver.
+
+        Returns
+        -------
+            Tuple[Tuple[Any], bytes]
+                Address which data is from, and raw data.
+        """
         return self._transceiver.recv_raw()
     
-    def send_raw(self, address: Tuple[Any], data: Union[bytes, bytearray]) -> None:
-        self._transceiver.send_raw(address, data)
+    def send_raw(self, address: Tuple[Any], data: Union[bytes, bytearray]) -> bool:
+        """Send raw data to the transceiver which has the given address.
+
+        Parameters
+        ----------
+            address : Tuple[Any]
+                Address to which the data is to be send.
+            data : Union[bytes, bytearray]
+                Data to be send.
+                
+        Returns
+        -------
+            bool
+                Whether the data is send certainly or not.
+        """
+        return self._transceiver.send_raw(address, data)
         
     def load(self, size: int = -1) -> None:
+        """Update the buffers of sockets associated with the transceiver.
+
+        Parameters
+        ----------
+            size : int, optional
+                Number of packets to be loaded, by default -1
+        """
         if size < 0:
             while True:
                 if not self._load_single_data():
@@ -116,7 +230,39 @@ class SocketTransceiver(TransceiverBase):
               blocking: bool = True, 
               period: Optional[float] = None, 
               certain: Optional[bool] = None) -> None:
-        
+        """Flush internal sending-buffer of registered sockets.
+
+        Parameters
+        ----------
+            socket : Optional[CommSocket], optional
+                Socket whose buffer to be flushed, by default None
+            blocking : bool, optional
+                If blocks and flushes, by default True
+            period : Optional[float], optional
+                Period for sending, by default None
+            certain : Optional[bool], optional
+                If the transceiver sends data certainly, by default None
+                
+        Raises
+        ------
+            ValueError
+                Raised if the given socket is invalid.
+                
+        Notes
+        -----
+            If the 'socket' is None, then the method flushes buffers of 
+            all sockets, while only the buffer of the socket is to be 
+            flushed when the 'socket' is given.
+            
+            If the 'blocking' is False, then this method executes 
+            task of sending in another method.
+            
+            If period is None, then the method uses the value of 
+            SocketTransceiver.period property as the parameter of period.
+            
+            If certain is None, then the method uses the value of 
+            SocketTransceiver.certain property as the parameter of certain.
+        """
         period_used = period if period is not None else self.period
         certain_used = certain if certain is not None else self.certain
         
@@ -128,6 +274,10 @@ class SocketTransceiver(TransceiverBase):
                 scheduled.extendleft(que)
         else:
             sock = self._Addr2Socket.get(socket.addr_yours)
+            if sock is None:
+                raise ValueError(
+                    "Given 'socket' is invalid."
+                )
             que = self._retreive_send_date(sock)
             scheduled.extendleft(que)
                 
