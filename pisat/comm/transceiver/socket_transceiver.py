@@ -1,7 +1,8 @@
 
 from collections import deque
-from time import sleep, time
-from typing import Any, Dict, Optional, Tuple, Union
+from enum import Enum
+from time import sleep
+from typing import Any, Deque, Dict, Optional, Tuple, Union
 from threading import Thread, Event
 
 from pisat.comm.transceiver.transceiver_base import TransceiverBase
@@ -11,22 +12,68 @@ from pisat.comm.transceiver.comm_socket import CommSocket
 
 class SocketTransceiver(TransceiverBase):
     
+    class Period(Enum):
+        MIN = 0.
+        
+        @classmethod
+        def is_valid(cls, period: float) -> bool:
+            if period >= cls.MIN.value:
+                return True
+            else:
+                return False
+    
     def __init__(self, 
                  transceiver: TransceiverBase,
+                 period: float = 0.,
+                 certain: bool = True,
                  name: Optional[str] = None) -> None:
         super().__init__(handler=transceiver._handler,
                          address=transceiver._addr,
                          name=name)
         
+        if not isinstance(transceiver, TransceiverBase):
+            raise TypeError(
+                "'transceiver' must be TransceiverBase."
+            )
+            
+        if not isinstance(certain, bool):
+            raise TypeError(
+                "'certain' must be bool."
+            )
+        
         self._transceiver: TransceiverBase = transceiver
-        
-        self._Addr2Recv: Dict[Tuple[Any], CommBytesStream] = {}
-        self._Addr2Send: Dict[Tuple[Any], CommBytesStream] = {}
-        self._Socket2Recv: Dict[CommSocket, CommBytesStream] = {}
-        self._Socket2Send: Dict[CommSocket, CommBytesStream] = {}
-        
+        self._Addr2Socket: Dict[Tuple[Any], CommSocket] = {}
         self._event_recv: Event = Event()
         self._event_send: Event = Event()
+        self.period = period
+        self._certain: bool = certain
+        
+    @property
+    def addr_mine(self):
+        return self._transceiver.addr
+    
+    @property
+    def period(self):
+        return self._period
+    
+    @period.setter
+    def period(self, val):
+        if not self.Period.is_valid(val):
+            raise ValueError(
+                "'period' must be no less than {}."
+                .format(self.Period.MIN.value)
+            )
+        self._period = val
+    
+    @property
+    def certain(self):
+        return self._certain
+    
+    def certain_on(self) -> None:
+        self._certain = True
+        
+    def certain_off(self) -> None:
+        self._certain = False
         
     def create_socket(self, 
                       address: Tuple[Any], 
@@ -40,12 +87,8 @@ class SocketTransceiver(TransceiverBase):
         
         recv_stream = CommBytesStream(maxlen=maxlen)
         send_stream = CommBytesStream()
-        self._Addr2Recv[address] = recv_stream
-        self._Addr2Send[address] = send_stream
-        
-        socket = CommSocket(recv_stream, send_stream, self._transceiver.addr, address, name=name)
-        self._Socket2Recv[socket] = recv_stream
-        self._Socket2Send[socket] = send_stream
+        socket = CommSocket(self, recv_stream, send_stream, self.addr_mine, address, name=name)
+        self._Addr2Socket[address] = socket
         
         return socket
         
@@ -58,57 +101,85 @@ class SocketTransceiver(TransceiverBase):
     def send_raw(self, address: Tuple[Any], data: Union[bytes, bytearray]) -> None:
         self._transceiver.send_raw(address, data)
         
-    def recv_from(self, socket: CommSocket, count: int) -> bytes:
-        recv_stream = self._Socket2Recv.get(socket)
-        if recv_stream is None:
-            ValueError(
-                "'socket' is not included in this transceiver."
-            )
+    def load(self, size: int = -1) -> None:
+        if size < 0:
+            while True:
+                if not self._load_single_data():
+                    break
+        else:
+            for _ in range(size):
+                if not self._load_single_data():
+                    break
+                
+    def flush(self, 
+              socket: Optional[CommSocket] = None,
+              blocking: bool = True, 
+              period: Optional[float] = None, 
+              certain: Optional[bool] = None) -> None:
+        
+        period_used = period if period is not None else self.period
+        certain_used = certain if certain is not None else self.certain
+        
+        scheduled: Deque[Tuple[Tuple[Any], bytes]] = deque()
+        
+        if socket is None:
+            for sock in self._Addr2Socket.values():
+                que = self._retreive_send_date(sock)
+                scheduled.extendleft(que)
+        else:
+            sock = self._Addr2Socket.get(socket.addr_yours)
+            que = self._retreive_send_date(sock)
+            scheduled.extendleft(que)
+                
+        if blocking:
+            self._flush_scheduled(scheduled, period=period_used, certain=certain_used)
+        else:
+            thread = Thread(target=self._flush_scheduled, 
+                            args=(scheduled, ), 
+                            kwargs={"period": period_used, "certain": certain_used})
+            thread.start()
+        
+    def _load_single_data(self) -> bool:
+        raw = self._transceiver.recv_raw()
+        if len(raw) == 2:
+            addr, data = raw
+            socket = self._Addr2Socket.get(addr)
             
-        return recv_stream.pop(count)
-    
-    def send_to(self, socket: CommSocket, data: Union[bytes, bytearray]) -> None:
-        send_stream = self._Socket2Send.get(socket)
-        if send_stream is None:
-            ValueError(
-                "'socket' is not included in this transceiver."
-            )
-            
-        send_stream.add(data)
+            if socket is not None:
+                socket._recv_stream.add(data)
+            return True
+        else:
+            return False
+           
+    def _flush_scheduled(self, 
+                         scheduled: Deque[Tuple[Tuple[Any], bytes]], 
+                         period: float = 0.,
+                         certain: bool = True) -> None:
+        try:
+            while True:
+                if not len(scheduled):
+                    break
+                
+                addr, data = scheduled.pop()
+                
+                def send_single_packet():
+                    flag = self._transceiver.send_raw(addr, data)
+                    if period > 0.:
+                        sleep(period)
+                    if certain and not flag:
+                        send_single_packet()
+                        
+                send_single_packet()
+        except:
+            pass
         
-    def observe(self) -> None:
-        
-        def observe_recv():
-            while not self._event_recv.is_set():
-                try:
-                    raw = self._transceiver.recv_raw()
-                    if len(raw) == 2:
-                        addr, data = raw
-                        stream = self._Addr2Recv.get(addr)
-                        if stream is not None:
-                            stream.add(data)
-                except:
-                    pass
-            self._event_recv.clear()
-        
-        def observe_send():
-            while not self._event_send.is_set():
-                try:
-                    for addr, stream in self._Addr2Send.items():
-                        if len(stream) > 0:
-                            data = stream.pop(self._transceiver.Packet.MAX.value)
-                            self._transceiver.send_raw(addr, data)
-                except:
-                    pass
-            self._event_send.clear()
-        
-        th_recv = Thread(target=observe_recv)
-        th_send = Thread(target=observe_send)
-        
-        th_recv.start()
-        th_send.start()
-        
-    def stop_observe(self) -> None:
-        self._event_recv.set()
-        self._event_send.set()
+    def _retreive_send_date(self, socket: CommSocket) -> Deque[Tuple[Tuple[Any], bytes]]:
+        que = deque()
+        while True:
+            data = socket._send_stream.pop(self._transceiver.Packet.MAX.value)
+            if len(data) > 0:
+                que.append((socket.addr_yours, data))
+            else:
+                break
+        return que
         

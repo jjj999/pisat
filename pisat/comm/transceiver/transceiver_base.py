@@ -34,5 +34,5 @@ class TransceiverBase(Component):
         pass
     
     # TODO to be overrided
-    def send_raw(self, address: Tuple[Any], data: Union[bytes, bytearray]) -> None:
+    def send_raw(self, address: Tuple[Any], data: Union[bytes, bytearray]) -> bool:
         pass

@@ -32,10 +32,13 @@ class Im920(TransceiverBase):
         INDEX_HEAD_TRANSIMIT = 11
         
         SEPARATOR_ADDR = ","
-        SIZE_ADDR = 3
+        SIZE_ADDR = 1
         
         LEN_REC_ID = 4
         FORMAT_REC_ID = "04X"
+        
+        RES_OK = b"OK"
+        RES_NG = b"NG"
 
     class Baudrate(Enum):
         RATE_1200 = "0"
@@ -134,9 +137,14 @@ class Im920(TransceiverBase):
         self._rec_id: Set[str] = set()
         
         self._update_rec_id()
+        
+    @property
+    def addr(self):
+        return (self.id, )
 
     @classmethod
     def check_addr(cls, address: Tuple[str]) -> bool:
+        """
         if len(address) == cls.Packet.SIZE_ADDR.value:
             for val in address:
                 if not isinstance(val, str):
@@ -144,21 +152,18 @@ class Im920(TransceiverBase):
             return True
         else:
             return False
+        """
+        return True
         
     @property
     def buf(self):
         self._update_buf()
         return self._buf
-
-    def recv_raw(self) -> Tuple[Tuple[str], bytes]:
-        self._update_buf()
-        if not len(self._buf):
-            return ()
-        return self._buf.pop()
-
-    def send_raw(self, address: Tuple[str], data: Union[bytes, bytearray]) -> None:
-        self._send_formatted(self.Command.TRANSMIT_DATA_VARIABLE.value, data)
     
+    def clear_buf(self) -> None:
+        self._update_buf()
+        self._buf.clear()
+        
     @classmethod
     def encode(cls, data: str) -> bytes:
         data_ascii = data.encode(cls.Packet.ENCODING_BASE.value)
@@ -172,13 +177,60 @@ class Im920(TransceiverBase):
     @classmethod
     def decode_addr(cls, data: Union[bytes, bytearray]) -> Tuple[str]:
         return tuple(data.decode().split(cls.Packet.SEPARATOR_ADDR.value))
+
+    def recv_raw(self) -> Tuple[Tuple[str], bytes]:
+        self._update_buf()
+        if not len(self._buf):
+            return ()
+        return self._buf.pop()
+
+    def send_raw(self, address: Tuple[str], data: Union[bytes, bytearray]) -> bool:
+        self._send_formatted(self.Command.TRANSMIT_DATA_VARIABLE.value, data)
+        return self._check_ok()
+        
+    def _check_ok(self) -> bool:
+        
+        word = bytearray()
+        def check_recursive() -> bool:
+            while not self._handler.counts_readable:
+                pass
+            dtype, res = self._recv_separate_type()
+
+            if dtype == self.DataType.TRANSMIT:
+                self._add_buf(res)
+                return check_recursive()
+            else:
+                length = len(res)
+                if length > 2:
+                    if self.Packet.RES_OK.value in res:
+                        return True
+                    else:
+                        return False
+                elif length == 2:
+                    if res == self.Packet.RES_OK.value:
+                        return True
+                    else:
+                        return False
+                elif length == 1:
+                    word.extend(res)
+                    if len(word) < 2:
+                        return check_recursive()
+                    else:
+                        if bytes(word) == self.Packet.RES_OK.value:
+                            return True
+                        else:
+                            return False
+                else:
+                    return check_recursive()
+                
+        return check_recursive()
     
     def _recv_separate_type(self) -> Tuple[Enum, bytes]:
         # remove terminator
         raw = self._handler.readline(end=self.Packet.TERMINATOR.value)
         
         if self.DataType.EVIDENCE.value in raw:
-            return (self.DataType.EVIDENCE, raw)
+            return (self.DataType.TRANSMIT, raw)
         else:
             return (self.DataType.CONFIG, raw)
         
@@ -189,16 +241,24 @@ class Im920(TransceiverBase):
         formatted.extend(self.Packet.TERMINATOR.value)
 
         self._handler.write(formatted)
-        self._handler.flush()
+        while self._handler.counts_writable:
+            self._handler.flush()
+        
+    def _add_buf(self, raw: bytes) -> None:
+        addr_raw, transmit = raw[:self.Packet.INDEX_LAST_ADDR.value], raw[self.Packet.INDEX_HEAD_TRANSIMIT.value:]
+        addr = self.decode_addr(addr_raw)
+        if len(addr) == 3:
+            id = (addr[1], )
+            self._buf.appendleft((id, transmit))
+        else:
+            print(addr)
         
     def _update_buf(self) -> None:
         while self._handler.counts_readable:
             dtype, data = self._recv_separate_type()
             if dtype == self.DataType.CONFIG:
                 continue
-            
-            addr, transmit = data[:self.Packet.INDEX_LAST_ADDR.value], data[self.Packet.INDEX_HEAD_TRANSIMIT.value:]
-            self._buf.appendleft((self.decode_addr(addr), transmit))
+            self._add_buf(data)
     
     def _get_params(self, command: str) -> str:
         self._update_buf()
@@ -212,8 +272,7 @@ class Im920(TransceiverBase):
             if dtype == self.DataType.CONFIG:
                 return data
             else:
-                addr, transmit = data[:self.Packet.INDEX_LAST_ADDR.value], data[self.Packet.INDEX_HEAD_TRANSIMIT.value:]
-                self._buf.appendleft((self.decode_addr(addr), self.decode(transmit)))
+                self._add_buf(data)
                 get_result()
                 
         return get_result()
@@ -238,8 +297,7 @@ class Im920(TransceiverBase):
                 else:
                     pass
             else:
-                addr, transmit = data[:self.Packet.INDEX_LAST_ADDR.value], data[self.Packet.INDEX_HEAD_TRANSIMIT.value:]
-                self._buf.appendleft((self.decode_addr(addr), self.decode(transmit)))
+                self._add_buf(data)
                 parse_result()
                 
         return parse_result()
