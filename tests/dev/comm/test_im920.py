@@ -5,7 +5,7 @@ from threading import Thread
 from time import sleep
 
 from pisat.handler import PyserialSerialHandler
-from pisat.comm.transceiver import Im920
+from pisat.comm.transceiver import Im920, transceiver
 from pisat.comm.transceiver import SocketTransceiver
 
 
@@ -77,6 +77,7 @@ def test_socket():
             if count > 5:
                 break
             
+            
 def test_socket_nonblock():
     address_1 = ("37B6", )
     address_2 = ("1CD2", )
@@ -88,7 +89,7 @@ def test_socket_nonblock():
     socket_2 = transceiver_2.create_socket(address_1)
     
     for _ in range(10):
-        socket_1.send(im920_1.encode("Hello World " * 10), blocking=None)
+        socket_1.send(im920_1.encode("Hello World " * 10))
     socket_1.send(im920_1.encode("Hello World " * 10))
     
     count = 0
@@ -100,7 +101,35 @@ def test_socket_nonblock():
             count += 1
             if count > 5:
                 break
-                
+    
+            
+def test_socket_sender():
+    address = ("37B6", )
+    transceiver = SocketTransceiver(im920_1, period=0.1)
+    socket = transceiver.create_socket(address)
+    
+    for _ in range(10):
+        socket.send_later(im920_1.encode("Hello Taiki " * 10))
+    socket.flush()
+    
+    
+def test_socket_recver():
+    address = ("1CD2", )
+    transceiver = SocketTransceiver(im920_2, period=0.1)
+    socket = transceiver.create_socket(address)
+    sleep(10)
+    
+    count = 0
+    while True:
+        data = socket.recv(256)
+        if len(data):
+            print("data: {} , len: {}".format(im920_1.decode(data), len(data)))
+        else:
+            count += 1
+            if count > 5:
+                break
+                    
     
 if __name__ == "__main__":
-    test_socket_nonblock()
+    test_socket_sender()
+    # test_socket_recver()
