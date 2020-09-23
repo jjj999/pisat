@@ -9,16 +9,15 @@ from pisat.comm.transceiver import Im920
 from pisat.comm.transceiver import SocketTransceiver
 
 
-handler1 = PyserialSerialHandler("/dev/ttyUSB0", baudrate=19200)
-handler2 = PyserialSerialHandler("/dev/ttyUSB1", baudrate=19200)
-
-im920_1 = Im920(handler1, name="im920_1")
-im920_2 = Im920(handler2, name="im920_2")
-im920_1.clear_buf()
-im920_2.clear_buf()
-
-
 def test_non_socket():
+    
+    handler1 = PyserialSerialHandler("/dev/ttyUSB0", baudrate=19200)
+    handler2 = PyserialSerialHandler("/dev/ttyUSB1", baudrate=19200)
+
+    im920_1 = Im920(handler1, name="im920_1")
+    im920_2 = Im920(handler2, name="im920_2")
+    im920_1.clear_buf()
+    im920_2.clear_buf()
     
     def main_1():
         for _ in range(10):
@@ -53,6 +52,13 @@ def test_non_socket():
     
 
 def test_socket():
+    handler1 = PyserialSerialHandler("/dev/ttyUSB0", baudrate=19200)
+    handler2 = PyserialSerialHandler("/dev/ttyUSB1", baudrate=19200)
+
+    im920_1 = Im920(handler1, name="im920_1")
+    im920_2 = Im920(handler2, name="im920_2")
+    im920_1.clear_buf()
+    im920_2.clear_buf()
     
     address_1 = ("37B6", )
     address_2 = ("1CD2", )
@@ -79,6 +85,15 @@ def test_socket():
             
             
 def test_socket_nonblock():
+    
+    handler1 = PyserialSerialHandler("/dev/ttyUSB0", baudrate=19200)
+    handler2 = PyserialSerialHandler("/dev/ttyUSB1", baudrate=19200)
+
+    im920_1 = Im920(handler1, name="im920_1")
+    im920_2 = Im920(handler2, name="im920_2")
+    im920_1.clear_buf()
+    im920_2.clear_buf()
+    
     address_1 = ("37B6", )
     address_2 = ("1CD2", )
     
@@ -104,18 +119,30 @@ def test_socket_nonblock():
     
             
 def test_socket_sender():
+    handler = PyserialSerialHandler("/dev/ttyUSB0", baudrate=19200)
+
+    im920 = Im920(handler, name="im920")
+    im920.clear_buf()
+    
     address = ("37B6", )
-    transceiver = SocketTransceiver(im920_1, period=0.1)
+    transceiver = SocketTransceiver(im920, period=0.1)
     socket = transceiver.create_socket(address)
     
     for _ in range(10):
-        socket.send_later(im920_1.encode("Hello Taiki " * 10))
+        socket.send_later(im920.encode("Hello Taiki " * 10))
     socket.flush()
     
     
 def test_socket_recver():
+    
+    handler = PyserialSerialHandler("/dev/tty.subserial-DN02T2F0", baudrate=19200)
+
+    im920 = Im920(handler, name="im920")
+    im920.clear_buf()
+    
     address = ("1CD2", )
-    transceiver = SocketTransceiver(im920_2, period=0.1)
+    
+    transceiver = SocketTransceiver(im920, period=0.1)
     socket = transceiver.create_socket(address)
     sleep(10)
     
@@ -123,7 +150,7 @@ def test_socket_recver():
     while True:
         data = socket.recv(256)
         if len(data):
-            print("data: {} , len: {}".format(im920_1.decode(data), len(data)))
+            print("data: {} , len: {}".format(im920.decode(data), len(data)))
         else:
             count += 1
             if count > 5:
