@@ -124,23 +124,24 @@ def test_socket_sender():
     im920 = Im920(handler, name="im920")
     im920.clear_buf()
     
-    address = ("37B6", )
+    address = ("1CD2", )
+    
     transceiver = SocketTransceiver(im920, period=0.1)
     socket = transceiver.create_socket(address)
     
-    for _ in range(10):
+    for _ in range(1):
         socket.send_later(im920.encode("Hello Taiki " * 10))
     socket.flush()
     
     
 def test_socket_recver():
     
-    handler = PyserialSerialHandler("/dev/tty.subserial-DN02T2F0", baudrate=19200)
+    handler = PyserialSerialHandler("/dev/ttyUSB0", baudrate=19200)
 
     im920 = Im920(handler, name="im920")
     im920.clear_buf()
     
-    address = ("1CD2", )
+    address = ("37B6", )
     
     transceiver = SocketTransceiver(im920, period=0.1)
     socket = transceiver.create_socket(address)
@@ -159,4 +160,3 @@ def test_socket_recver():
     
 if __name__ == "__main__":
     test_socket_sender()
-    # test_socket_recver()
