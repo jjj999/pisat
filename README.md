@@ -23,3 +23,8 @@ pipenv の場合は
 ```
 $ pipenv install git+https://github.com/jjj999/pisat.git#egg=pisat
 ```
+
+## Documentation
+
+pisat に関するドキュメントや API は [docs](./docs/) を参照してください．
+ただし，サブパッケージによってはドキュメントの整備が追いついていない可能性があります．
