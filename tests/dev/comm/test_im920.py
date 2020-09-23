@@ -5,7 +5,7 @@ from threading import Thread
 from time import sleep
 
 from pisat.handler import PyserialSerialHandler
-from pisat.comm.transceiver import Im920, transceiver
+from pisat.comm.transceiver import Im920
 from pisat.comm.transceiver import SocketTransceiver
 
 
