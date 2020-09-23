@@ -1,40 +1,25 @@
 # pisat (Alpha)
 
-pisat は[東北大学 From The Earth](https://www.fte-tohoku.org/) のCanSatチームが開発している
-Raspberry Pi を用いた CanSat フレームワークです．
-団体のリポジトリは[こちら](https://github.com/FROM-THE-EARTH)．
+## Overview
 
-## 目的
+pisat は[東北大学 From The Earth](https://www.fte-tohoku.org/) のCanSatチームが開発している CanSat フレームワークです．
+詳細は[開発者用ドキュメント](./docs/developer/)を参照してください．
 
-* CanSat のコンポーネントの抽象化
-* 各コンポーネントを統合するシステム開発
-* Raspberry Pi を使った IoT デバイス開発の体系化
+## Examples
 
-## Developer Documents
-開発者用ドキュメントは[docs/developer](./docs/developer)にあります．全編日本語．
+応用例は [sample](./sample/) を参照してください．
 
-## リファレンス
-APIやCanSatクラスの作成方法，その他デバイスへの応用などは[Wiki](./wiki)に掲載します．
-掲載場所は変更になる可能性があります．
+## Installation
 
-## プロジェクト
-現在走っている開発プロジェクトは[Projects](./projects)を参照してください．
+pip または pipenv でインストール可能です．
+pip の場合は
 
-## 各ディレクトリの説明
+```
+$ pip insatll git+https://github.com/jjj999/pisat.git
+```
 
-### [docs](./docs/)
-APIや開発者用のドキュメントを置きます．
+pipenv の場合は
 
-### [data](./data/)
-シミュレートやデータ分析に利用可能なデータを置きます．
-
-### [pisat](./pisat/)
-これが開発中のパッケージです．
-
-### [sample](./sample/)
-pisat を使ったサンプルプログラムが置かれています．
-
-### [tests](./tests/)
-デバッグ・検証用のスクリプトを置いてます．
-内部のディレクトリ構造は pisat ディレクトリと同じです．
-何かモジュールを作成した場合は検証用のスクリプトを作成し，このディレクトリ内に置きます．
+```
+$ pipenv install git+https://github.com/jjj999/pisat.git#egg=pisat
+```
