@@ -10,7 +10,6 @@ memory-profiler = "*"
 numpy = "*"
 pigpio = "*"
 pyserial = "*"
-im920 = {git = "https://github.com/jjj999/im920_py"}
 "rpi.gpio" = "*"
 
 [requires]
