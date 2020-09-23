@@ -75,7 +75,8 @@ class CommStreamBase:
         pass
     
     def __len__(self):
-        return len(self._que)
+        with self._que:
+            return len(self._que)
     
 
 class CommBytesStream(CommStreamBase):
