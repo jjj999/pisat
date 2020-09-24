@@ -11,7 +11,6 @@ echo updating and installing applications...
 sudo apt update
 sudo apt upgrade
 sudo apt install vim
-sudo apt install python3-opencv
 
 echo installing python packages...
 pip insatall pipenv

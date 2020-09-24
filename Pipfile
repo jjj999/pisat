@@ -8,8 +8,8 @@ memory-profiler = "*"
 
 [packages]
 numpy = "*"
-pigpio = "*"
 pyserial = "*"
+pigpio = "*"
 "rpi.gpio" = "*"
 
 [requires]
