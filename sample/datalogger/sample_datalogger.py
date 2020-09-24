@@ -7,7 +7,7 @@ import pigpio
 from pisat.handler import PigpioI2CHandler
 from pisat.sensor import Bme280, Apds9301
 from pisat.adapter import BarometerAdapter, AdapterGroup
-from pisat.core.logger import DataLogger, SensorController, LogQueue
+from pisat.core.logger import DataLogger, SensorController, DictLogQueue
 
 
 def main():
@@ -26,7 +26,7 @@ def main():
     
     con = SensorController(bme280 + apds9301, 
                            AdapterGroup(adapter_barometer))
-    queue = LogQueue(500, dnames=con.dnames)
+    queue = DictLogQueue(500, con.dnames)
     counter = 0
 
     with DataLogger(con, queue) as dlogger:
