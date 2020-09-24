@@ -1,15 +1,16 @@
 
 from typing import Optional
 
-import pigpio
-
+from pisat.util.platform import is_raspberry_pi
 from pisat.handler.digital_output_handler_base import DigitalOutputHandlerBase
 
+if is_raspberry_pi():
+    import pigpio
 
 class PigpioDigitalOutputHandler(DigitalOutputHandlerBase):
     
     def __init__(self,
-                 pi: pigpio.pi,
+                 pi,
                  pin: int,
                  name: Optional[str] = None) -> None:
         super().__init__(pin, name=name)

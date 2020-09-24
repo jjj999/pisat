@@ -1,15 +1,17 @@
 
 from typing import Optional
 
-import pigpio
-
+from pisat.util.platform import is_raspberry_pi
 from pisat.handler.digital_input_handler_base import DigitalInputHandlerBase
+
+if is_raspberry_pi():
+    import pigpio
 
 
 class PigpioDigitalInputHandler(DigitalInputHandlerBase):
     
     def __init__(self, 
-                 pi: pigpio.pi,
+                 pi,
                  pin: int,
                  pullup: bool = False,
                  pulldown: bool = False,

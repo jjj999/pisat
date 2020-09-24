@@ -20,10 +20,12 @@ pigpio API
 from typing import Optional, Tuple, Union
 from enum import Enum
 
-import pigpio
-
+from pisat.util.platform import is_raspberry_pi
 from pisat.handler.spi_handler_base import SPIHandlerBase
 
+if is_raspberry_pi():
+    import pigpio
+    
 
 class PigpioSPIHandler(SPIHandlerBase):
     
@@ -52,7 +54,7 @@ class PigpioSPIHandler(SPIHandlerBase):
                 return False
 
     def __init__(self,
-                 pi: pigpio.pi,
+                 pi,
                  channel: int,
                  baudrate: int,
                  flag: int = 0,

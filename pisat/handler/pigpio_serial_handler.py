@@ -2,10 +2,12 @@
 from typing import Optional, Tuple, Union
 from enum import Enum
 
-import pigpio
-
+from pisat.util.platform import is_raspberry_pi
 from pisat.handler.serial_handler_base import SerialHandlerBase
 
+if is_raspberry_pi():
+    import pigpio
+    
 
 class PigpioSerialHandler(SerialHandlerBase):
     
@@ -37,7 +39,7 @@ class PigpioSerialHandler(SerialHandlerBase):
             return False
     
     def __init__(self,
-                 pi: pigpio.pi,
+                 pi,
                  port: str,
                  baudrate: int = 115200,
                  name: Optional[str] = None) -> None:

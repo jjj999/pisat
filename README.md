@@ -2,7 +2,8 @@
 
 ## Overview
 
-pisat は[東北大学 From The Earth](https://www.fte-tohoku.org/) のCanSatチームが開発している CanSat フレームワークです．
+pisat は[東北大学 From The Earth](https://www.fte-tohoku.org/) の CanSat チームが開発しているロボットフレームワークです．
+現時点では Raspberry Pi の GPIO のみ対応しています．
 詳細は[開発者用ドキュメント](./docs/developer/)を参照してください．
 
 ## Examples
@@ -11,19 +12,18 @@ pisat は[東北大学 From The Earth](https://www.fte-tohoku.org/) のCanSatチ
 
 ## Installation
 
-### pip
+pip または pipenv を用いてインストール可能です．
+ただし，Rapsberry Pi 以外のデバイスでインストールした場合には
+Raspberry Pi でのみ動作可能なミドルウェアはインストールされないので注意してください．
 
 ```
 $ pip insatll git+https://github.com/jjj999/pisat.git
 ```
-
-### pipenv
-
 ```
 $ pipenv install git+https://github.com/jjj999/pisat.git#egg=pisat
 ```
 
-### 開発環境をデプロイ
+## Deploy Developing Environment
 
 開発環境をデプロイする場合は，リポジトリをクローン後にリポジトリのルート上で
 
