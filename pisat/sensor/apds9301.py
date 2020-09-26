@@ -123,6 +123,10 @@ class Apds9301(SensorBase):
                  debug: bool = False,
                  name: Optional[str] = None) -> None:
         super().__init__(handler, debug, name)
+        if self._debug:
+            return
+        
+        self._handler: Optional[I2CHandlerBase] = handler
         
         self._gain: int = self.BITS_TIMING_GAIN_LOW
         self._manual: int = self.BITS_TIMING_MANUAL_STOP
@@ -132,9 +136,6 @@ class Apds9301(SensorBase):
         self._threshold_high: int = self.BITS_THRESHOLD_DEFAULT
         self._level: int = self.BITS_INTR_LEVEL_DISABLED
         self._persistence: int = 0
-
-        if self._debug:
-            return
         
         if handler is not None and not isinstance(handler, I2CHandlerBase):
             raise HandlerMismatchError(
