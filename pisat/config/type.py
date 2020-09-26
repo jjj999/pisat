@@ -21,4 +21,4 @@ from typing import Union
 # Logable means this type of object can be logged by DataLogger.
 # A subject to be logged and saved into a log file must be
 # Logable type.
-Logable = Union[int, float, str]
+Logable = Union[int, float, str, bytes, None]
