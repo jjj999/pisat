@@ -113,7 +113,6 @@ class CanSat:
         self._current: Type[Node] = self._context.current
         self._destination: Dict[Any, Type[Node]] = self._context.destination
         
-        self._buf: Dict[str, Logable] = {}
         self._event: PostEvent = PostEvent()
         self._node: Node = self._current(self._manager, self._event)
         
@@ -179,6 +178,8 @@ class CanSat:
         'judge' method of the current Node the result, and returns
         returned value from the judge method. Therefore, frequency of 
         execution of this method means sampling rate of the machine. 
+        The data which this method gives the current Node includes 
+        only data defined in the Node as Node.DNAME_JUDGED.
         
         This method feeds empty dictionary to the judge method of the 
         current Node when a DataLogger object is not given in the time of  
@@ -194,12 +195,13 @@ class CanSat:
         """
         # self._is_feed         --> CanSat setting
         # self._current.is_feed --> Node setting
-        if self._current.is_feed and self._is_feed:
+        if self._node.is_feed and self._is_feed:
             data = self._dlogger.read()
-            for dname in data.keys():
-                self._buf[dname] = data[dname]
+            data_for_judge = {}
+            for dname in self._node.DNAMES_JUDGED:
+                data_for_judge[dname] = data.get(dname)
                 
-            return self._node.judge(self._buf)
+            return self._node.judge(data_for_judge)
         else:
             return self._node.judge({})
             
@@ -210,7 +212,6 @@ class CanSat:
         A user can override Node.exit and schedule executing the method.
         """
         self._node.exit()
-        self._buf.clear()
         
     def cycle(self) -> Any:
         """Execute lifecycle of the current Node
