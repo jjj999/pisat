@@ -104,6 +104,14 @@ class CanSat:
                 "'manager' must be ComponentManager, but {} was given."
                 .format(manager.__class__.__name__)
             )
+        if dlogger is not None and not isinstance(dlogger, DataLogger):
+            raise TypeError(
+                "'dlogger' must be DataLogger if used."
+            )
+        if slogger is not None and not isinstance(slogger, SystemLogger):
+            raise TypeError(
+                "'slogger' must be SystemLogger if used."
+            )
         
         self._context: Context = context
         self._manager: ComponentManager = manager
@@ -115,28 +123,6 @@ class CanSat:
         
         self._event: PostEvent = PostEvent()
         self._node: Node = self._current(self._manager, self._event)
-        
-        #   NOTE
-        #       DataLogger and SystemLogger have to be given explicitly.
-        
-        self._is_feed: bool = True
-        self._is_logging: bool = True
-        
-        if self._dlogger is None:
-            self._is_feed = False
-        else:
-            if not isinstance(self._dlogger, DataLogger):
-                raise TypeError(
-                    "'dlogger' must be DataLogger."
-                )
-                
-        if self._slogger is None:
-            self._is_logging = False
-        else:
-            if not isinstance(self._slogger, SystemLogger):
-                raise TypeError(
-                    "'slogger' must be SystemLogger."
-                )
                 
     def log(self, node: Type[Node], msg: str):
         """Logging system log related with given Node.
@@ -193,9 +179,7 @@ class CanSat:
             Any
                 Result of giving Node.judge logged data.
         """
-        # self._is_feed         --> CanSat setting
-        # self._current.is_feed --> Node setting
-        if self._node.is_feed and self._is_feed:
+        if self._node.is_feed and self._dlogger is not None:
             data = self._dlogger.read()
             data_for_judge = {}
             for dname in self._node.DNAMES_JUDGED:
@@ -212,6 +196,10 @@ class CanSat:
         A user can override Node.exit and schedule executing the method.
         """
         self._node.exit()
+        
+        # reset all readabilites of data logger
+        if self._dlogger is not None:
+            self._dlogger.reset_all()
         
     def cycle(self) -> Any:
         """Execute lifecycle of the current Node
