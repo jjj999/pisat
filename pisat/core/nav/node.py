@@ -20,7 +20,7 @@ pisat.core.nav.Context
 pisat.core.cansat.CanSat
 """
 
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Set
 
 from pisat.config.type import Logable
 from pisat.core.manager.component_manager import ComponentManager
@@ -73,7 +73,7 @@ class Node:
     """
     
     is_feed: bool = True
-    DNAMES_JUDGED: Tuple[str] = ()
+    DNAMES_JUDGED: Set[str] = set()
 
     def __init__(self, 
                  manager: ComponentManager,
