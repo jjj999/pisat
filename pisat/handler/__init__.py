@@ -8,6 +8,8 @@ from pisat.handler.i2c_handler_base import I2CHandlerBase
 from pisat.handler.spi_handler_base import SPIHandlerBase
 from pisat.handler.serial_handler_base import SerialHandlerBase
 
+from pisat.handler.handler_base import DataBrokenError
+
 from pisat.handler.pigpio_digital_input_handler import PigpioDigitalInputHandler
 from pisat.handler.pigpio_digital_output_handler import PigpioDigitalOutputHandler
 from pisat.handler.pigpio_pwm_handler import PigpioPWMHandler
