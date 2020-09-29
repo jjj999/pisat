@@ -1,0 +1,3 @@
+
+class Tester:
+    pass
