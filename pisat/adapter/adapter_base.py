@@ -214,8 +214,13 @@ class AdapterGroup(AdapterInterface, ComponentGroup):
         # TODO Think more reasonable algorism.
         res = []
         for adapter, reqs in self._AtoD.items():
+            # All data is required
             if len(adapter.dnames) == len(reqs):
                 res.append(adapter.make_supply())
+            # Ignore reading if required dnames are nothing
+            elif not len(reqs):
+                pass
+            # When needed to handle a readability
             else:
                 res.append(adapter.make_supply(*tuple(reqs)))
 

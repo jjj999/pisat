@@ -250,9 +250,14 @@ class SensorGroup(SensorInterface, ComponentGroup):
         res_f = []
         res = []
         for sensor, reqs in self._StoD.items():
+            # All data is required
             if len(sensor.dnames) == len(reqs):
                 res_f.append(sensor.make_readf())
                 res.append(sensor.make_read())
+            # Ignore reading if required dnames are nothing
+            elif not len(reqs):
+                pass
+            # When needed to handle a readability
             else:
                 args = tuple(reqs)
                 res_f.append(sensor.make_readf(*args))
