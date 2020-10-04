@@ -1,7 +1,6 @@
 
 
-from pisat.handler.serial_handler_base import SerialHandlerBase
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, Union, List
 from enum import Enum
 
 from pisat.config.type import Logable
@@ -10,12 +9,22 @@ from pisat.util.cached_property import cached_property
 from pisat.util.type import is_all_None
 from pisat.handler.handler_base import DataBrokenError
 from pisat.handler.i2c_handler_base import I2CHandlerBase
+from pisat.handler.serial_handler_base import SerialHandlerBase 
 from pisat.sensor.sensor_base import SensorBase
 
 
 class Bno055Base(SensorBase):
     
-    DATA_NAMES: Tuple[str] = ()
+    DATA_NAMES: Tuple[str] = (
+        ACCELERATION_X, ACCELERATION_Y, ACCELERATION_Z,
+        GEOMAGNETISM_X, GEOMAGNETISM_Y, GEOMAGNETISM_Z,
+        GYRO_X, GYRO_Y, GYRO_Z,
+        ORIENTATION_YAW, ORIENTATION_ROLL, ORIENTATION_PITCH,
+        ORIENTATION_QUAT_W, ORIENTATION_QUAT_X, ORIENTATION_QUAT_Y, ORIENTATION_QUAT_Z,
+        ACCELERATION_LINEAR_X, ACCELERATION_LINEAR_Y, ACCELERATION_LINEAR_Z,
+        ACCELERATION_GRAVITY_X, ACCELERATION_GRAVITY_Y, ACCELERATION_GRAVITY_Z,
+        
+    )
     DEFAULT_VALUES: Dict[str, Logable] = {}
     
     #   RESISTOR ADDRESS
@@ -75,6 +84,7 @@ class Bno055Base(SensorBase):
         GRV_DATA_Z_LSB = 0x32
         GRV_DATA_Z_MSB = 0x33
         TEMP = 0x34
+        LEN_DATA = 45
         
         CALIB_STAT = 0x35
         ST_RESULT = 0x36
@@ -785,6 +795,32 @@ class Bno055Base(SensorBase):
         self._interrupt_enabled = self.InterruptEnabled()
         self._interrupt_mask = self.InterruptMask()
         
+    def readf(self, *dnames: Tuple[str, ...]) -> List[Logable]:
+        # for debug mode
+        debugging = super().readf(*dnames)
+        if debugging:
+            return debugging
+        
+        raw = self._retreive_data()
+        vec_acc = self._calc_vector(raw[:6], self._calc_acc)
+        vec_mag = self._calc_vector(raw[6:12], self._calc_mag)
+        vec_gyro = self._calc_vector(raw[12:18], self._calc_gyro)
+        vec_euler = self._calc_vector(raw[18:24], self._calc_euler)
+        vec_quaternion = self._calc_vector(raw[24:32], self._calc_quaternion)
+        vec_lin_acc = self._calc_vector(raw[32:38], self._calc_acc)
+        vec_grv_acc = self._calc_vector(raw[38:44], self._calc_acc)
+        temp = self._calc_temp(raw[44])
+        
+        result = []
+        if len(dnames):
+            for vec in (vec_acc, vec_mag, vec_gyro, vec_euler, vec_quaternion, vec_lin_acc, vec_grv_acc):
+                result.extend(vec)
+            result.append(temp)
+            return result
+        else:
+            for dname in dnames:
+                pass
+        
     def _read_single_byte(self, reg: int) -> int:
         pass
     
@@ -833,9 +869,60 @@ class Bno055Base(SensorBase):
     def current_page_id(self):
         return self._current_page
     
-    # TODO
     def _retreive_data(self) -> bytes:
-        pass
+        return self._read_seq_bytes(self.RegPage0.ACC_DATA_X_LSB.value, self.RegPage0.LEN_DATA.value)
+    
+    def _convert2signed(self, data: bytes) -> int:
+        
+        # The lower index, the smaller byte
+        msb_checker = 1 << 7
+        if data[-1] & msb_checker:
+            data[-1] = - data[-1]
+        
+        result = 0
+        for i, byte in enumerate(data):
+            result |= byte << (i * 8)
+            
+        return result
+    
+    def _calc_acc(self, data: int) -> float:
+        # See datasheet page 31
+        if self._unit_acc == self.AccUnit.MPS2:
+            return data / 100
+        else:
+            return data
+        
+    def _calc_mag(self, data: int) -> float:
+        # See datasheet page 32
+        return data / 16
+    
+    def _calc_gyro(self, data: int) -> float:
+        # See datasheet page 33
+        if self._unit_gyro == self.GyroUnit.DPS:
+            return data / 16
+        else:
+            return data / 900
+        
+    def _calc_euler(self, data: int) -> float:
+        # See datasheet page 35
+        if self._unit_euler == self.EulerUnit.DEGREES:
+            return data / 16
+        else:
+            return data / 900
+        
+    def _calc_quaternion(self, data: int) -> float:
+        # See datasheet page 35
+        return data / (2 << 13)
+    
+    def _calc_temp(self, data: int) -> int:
+        # See datasheet page 37
+        if self._unit_temp == self.TempUnit.CELSIUS:
+            return data
+        else:
+            return data * 2
+    
+    def _calc_vector(self, data, func) -> Tuple[float]:
+        return tuple([func(data[i * 2 : i * 2 + 1]) for i in range(int(len(data) / 2))])
     
     def _read_calib_stat(self) -> Tuple[int]:
         data = self._read_single_byte(self.RegPage0.CALIB_STAT.value)
