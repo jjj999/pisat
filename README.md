@@ -1,4 +1,4 @@
-# pisat (Alpha)
+# pisat
 
 ## Overview
 
