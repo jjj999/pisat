@@ -10,7 +10,7 @@ class DigitalInputHandlerBase(DigitalIOHandlerBase):
                  pullup: bool = False,
                  pulldown: bool = False,
                  name: Optional[str] = None) -> None:
-        super().__init__(name=name)
+        super().__init__(pin, name=name)
         
         self._pin: int = pin
         
