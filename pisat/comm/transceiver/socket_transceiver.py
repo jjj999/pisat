@@ -94,7 +94,7 @@ class SocketTransceiver(TransceiverBase):
         self._Addr2Socket: Dict[Tuple[Any], CommSocket] = {}
         self._event_recv: Event = Event()
         self._event_send: Event = Event()
-        self.period = period
+        self._period = period
         self._certain: bool = certain
         
     @property
