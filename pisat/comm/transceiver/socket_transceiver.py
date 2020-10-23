@@ -21,7 +21,7 @@ from collections import deque
 from enum import Enum
 from time import sleep
 from typing import Any, Deque, Dict, Optional, Tuple, Union
-from threading import Thread, Event
+from threading import Thread
 
 from pisat.comm.transceiver.transceiver_base import TransceiverBase
 from pisat.comm.transceiver.comm_stream import CommBytesStream
@@ -92,8 +92,6 @@ class SocketTransceiver(TransceiverBase):
         
         self._transceiver: TransceiverBase = transceiver
         self._Addr2Socket: Dict[Tuple[Any], CommSocket] = {}
-        self._event_recv: Event = Event()
-        self._event_send: Event = Event()
         self._period = period
         self._certain: bool = certain
         
@@ -165,6 +163,34 @@ class SocketTransceiver(TransceiverBase):
         self._Addr2Socket[address] = socket
         
         return socket
+    
+    def close(self, address: Tuple[Any]) -> None:
+        """Close a socket assosiated with given address.
+        
+        This method deletes a socket with the given address. After execution 
+        of the method, the socket object will not be accessed.
+
+        Parameters
+        ----------
+        address : Tuple[Any]
+            Address of a socket with which a socket object is connected.
+        """
+        socket = self._Addr2Socket.pop(address)
+        del socket
+        
+    def closes(self, socket: CommSocket) -> None:
+        """Close given socket.
+        
+        This method deletes the given socket. After execution of the method, 
+        the object will not be accessed.
+        
+        Parameters
+        ----------
+        socket : CommSocket
+            Socket to be closed.
+        """
+        del self._Addr2Socket[socket.addr_yours]
+        del socket
         
     def check_addr(self, address: Tuple[Any]) -> bool:
         """Check if the given address is valid or not.

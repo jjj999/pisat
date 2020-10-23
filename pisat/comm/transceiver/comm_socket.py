@@ -87,6 +87,14 @@ class CommSocket(Component):
     def certain(self):
         return self._transceiver.certain
     
+    def close(self) -> None:
+        """Close this socket.
+        
+        This method deletes the object. After execution of the method, 
+        the object will not be accessed.
+        """
+        self._transceiver.closes(self)
+    
     def recv(self, count: int, load: bool = True) -> bytes:
         """Receive data from the other socket.
 
