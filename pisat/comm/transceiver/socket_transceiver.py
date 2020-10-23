@@ -216,14 +216,15 @@ class SocketTransceiver(TransceiverBase):
             size : int, optional
                 Number of packets to be loaded, by default -1
         """
-        if size < 0:
-            while True:
-                if not self._load_single_data():
-                    break
-        else:
-            for _ in range(size):
-                if not self._load_single_data():
-                    break
+        count = 0
+        while True:
+            is_success = self._load_single_data()
+            if not is_success:
+                break
+            
+            count += 1
+            if count >= size:
+                break
                 
     def flush(self, 
               socket: Optional[CommSocket] = None,
