@@ -270,7 +270,7 @@ class SocketTransceiver(TransceiverBase):
         
         if socket is None:
             for sock in self._Addr2Socket.values():
-                que = self._retreive_send_date(sock)
+                que = self._retreive_send_data(sock)
                 scheduled.extendleft(que)
         else:
             sock = self._Addr2Socket.get(socket.addr_yours)
@@ -278,7 +278,7 @@ class SocketTransceiver(TransceiverBase):
                 raise ValueError(
                     "Given 'socket' is invalid."
                 )
-            que = self._retreive_send_date(sock)
+            que = self._retreive_send_data(sock)
             scheduled.extendleft(que)
                 
         if blocking:
@@ -323,7 +323,7 @@ class SocketTransceiver(TransceiverBase):
         except:
             pass
         
-    def _retreive_send_date(self, socket: CommSocket) -> Deque[Tuple[Tuple[Any], bytes]]:
+    def _retreive_send_data(self, socket: CommSocket) -> Deque[Tuple[Tuple[Any], bytes]]:
         que = deque()
         while True:
             data = socket._send_stream.pop(self._transceiver.Packet.MAX.value)
