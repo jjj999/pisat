@@ -207,6 +207,30 @@ class SocketTransceiver(TransceiverBase):
                 Whether the data is send certainly or not.
         """
         return self._transceiver.send_raw(address, data)
+    
+    def listen(self) -> CommSocket:
+        """Make the object be a server and wait a connection.
+        
+        This method sets the SocketTransceiver object the server mode. 
+        In the server mode, the method waits a connection from any clients 
+        and blocks execution. Once a connection is detected, this method 
+        makes a socket assosiated with the client and returns it.
+
+        Returns
+        -------
+        CommSocket
+            A socket assosiated with a client.
+        """
+        while True:
+            raw = self.recv_raw()
+            if len(raw) == 2:
+                break
+        
+        addr, data = raw
+        socket = self.create_socket(addr)
+        socket._recv_stream.add(data)
+        
+        return socket
         
     def load(self, size: int = -1) -> None:
         """Update the buffers of sockets associated with the transceiver.

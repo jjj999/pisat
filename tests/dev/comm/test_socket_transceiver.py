@@ -1,109 +1,94 @@
 
 from collections import deque
-from typing import Deque, Optional, Tuple, Union
 from enum import Enum
-import random
 from threading import Thread
 from time import sleep
+from typing import Deque, Dict, Optional, Tuple, Union
+import unittest
 
 from pisat.comm.transceiver import TransceiverBase
 from pisat.comm.transceiver import SocketTransceiver
-from pisat.comm.transceiver import CommSocket
+from pisat.comm.transceiver import CommSocket, CommBytesStream
 
 
 class TestTransceiver(TransceiverBase):
     
     class Setting(Enum):
         BYTES_PACKET_MAX = 64
-        
-    DATA = b"abcdefghijklmn"
-    ADDRESS = [1, 2, 3, 4, 5]
+    
+    shared_buf: Dict[Tuple, Deque[Tuple[Tuple, bytes]]] = {}
         
     def __init__(self,
-                 address: Tuple[int],
+                 addr: Tuple[int],
                  name: Optional[str] = None) -> None:
-        super().__init__(handler=None, address=address, name=name)
+        super().__init__(handler=None, address=addr, name=name)
         
-        self._buf: Deque[bytes] = deque()
-        self._buf_send: Deque[bytes] = deque()
+        self.shared_buf[addr] = deque()
         
-    def update_data(self):
-        def update():
-            time = 0
-            while True:
-                self._buf.appendleft(self.DATA)
-                sleep(1)
-                time += 1
-                
-                if time > 10:
-                    break
-                
-            print("end update_data")
-            
-        thread = Thread(target=update)
-        thread.start()
+    @classmethod
+    def check_addr(cls, address: Tuple[int]) -> bool:
+        if len(address) == 1 and isinstance(address[0], int):
+            return True
+        else:
+            return False
         
     def recv_raw(self) -> Tuple[Tuple[int], bytes]:
-        if len(self._buf) > 0:
-            addr = 1
-            # addr = random.choice(self.ADDRESS)
-            data = self._buf.pop()
-            return (addr, ), data
-        else:
+        buf = self.shared_buf[self.addr]
+        if not len(buf):
             return ()
         
-    def send_raw(self, address: Tuple[int], data: Union[bytes, bytearray]) -> None:
-        address_str = str(address[0])
-        self._buf_send.appendleft(address_str.encode() + bytes(data))
+        return buf.pop()
         
-        
-def main_1():
-        
-    test_transceiver = TestTransceiver((0,))
-    sock_transceiver = SocketTransceiver(test_transceiver)
+    def send_raw(self, addr: Tuple[int], data: Union[bytes, bytearray]) -> None:
+        buf = self.shared_buf[addr]
+        buf.appendleft((self.addr, data))
 
-    socket_1 = sock_transceiver.create_socket((1, ), name="socket_1")
-    socket_2 = sock_transceiver.create_socket((2, ), name="socket_2")
 
-    test_transceiver.update_data()
-    sock_transceiver.observe()
+class TestSocketTransceiver(unittest.TestCase):
     
-    time = 0
-    while True:
-        socket_1.send(b'hello' * 20)
-        sleep(0.5)
-        time += 0.5
-        print(socket_1.recv(10))
+    def setUp(self) -> None:
         
-        if time > 11:
-            break
+        self.addr_0 = (0,)
+        self.addr_1 = (1,)
+        self.addr_2 = (2,)
         
-    
-    sock_transceiver.stop_observe()
-    print(test_transceiver._buf_send)
-    
-    
-def main_2():
-    
-    test_transceiver = TestTransceiver((0,))
-    sock_transceiver = SocketTransceiver(test_transceiver)
+        self.period = 0.1
+        
+        self.transceiver_0 = TestTransceiver(self.addr_0)
+        self.transceiver_1 = TestTransceiver(self.addr_1)
+        self.transceiver_2 = TestTransceiver(self.addr_2)
+        
+        self.sock_transceiver_0 = SocketTransceiver(self.transceiver_0, 
+                                                    period=self.period, 
+                                                    certain=True)
+        self.sock_transceiver_1 = SocketTransceiver(self.transceiver_1, 
+                                                    period=self.period, 
+                                                    certain=True)
+        self.sock_transceiver_2 = SocketTransceiver(self.transceiver_2, 
+                                                    period=self.period, 
+                                                    certain=True)
 
-    socket_1 = sock_transceiver.create_socket((1, ), name="socket_1")
-    socket_2 = sock_transceiver.create_socket((2, ), name="socket_2")
-
-    sock_transceiver.observe()
+    def test_period_check(self):
+        self.assertEqual(self.sock_transceiver_0.period, self.period)
     
-    print("go")
-    socket_1.send(b"hello world " * 10)
-    socket_2.send(b"bye world " * 10)
-    sleep(0.01)
-    print(test_transceiver._buf_send)
-    
-    for d in test_transceiver._buf_send:
-        print(len(d))
-    
-    sock_transceiver.stop_observe()
+    def test_listen(self):
+        data_send = b"Hello World"
         
+        thread = Thread(target=self.exec_client, args=(data_send,))
+        thread.start()
+        
+        sock = self.sock_transceiver_0.listen()
+        self.assertEqual(sock.addr_mine, self.addr_0)
+        self.assertEqual(sock.addr_yours, self.addr_1)
+        
+        data_recv = sock.recv(100)
+        self.assertEqual(data_recv, data_send)
+        
+    def exec_client(self, data: bytes):
+        sleep(5)
+        self.transceiver_1.send_raw(self.addr_0, data)
+
+
 if __name__ == "__main__":
-    main_2()
+    unittest.main()
         
