@@ -95,7 +95,7 @@ class CommSocket(Component):
         """
         self._transceiver.closes(self)
     
-    def recv(self, count: int, load: bool = True) -> bytes:
+    def recv(self, count: int, load: bool = True, ignore: bool = False) -> bytes:
         """Receive data from the other socket.
 
         Parameters
@@ -116,7 +116,7 @@ class CommSocket(Component):
             data is not be retreived further more.
         """
         if load:
-            self._transceiver.load()
+            self._transceiver.load(ignore=ignore)
         return self._recv_stream.pop(count)
     
     def send_later(self, data: Union[bytes, bytearray]) -> None:

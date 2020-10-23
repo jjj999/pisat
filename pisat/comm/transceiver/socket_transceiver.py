@@ -20,7 +20,7 @@ pisat.comm.transceiver.CommSocket
 from collections import deque
 from enum import Enum
 from time import sleep
-from typing import Any, Deque, Dict, Optional, Tuple, Union
+from typing import Any, Deque, Dict, List, Optional, Tuple, Union
 from threading import Thread
 
 from pisat.comm.transceiver.transceiver_base import TransceiverBase
@@ -172,8 +172,8 @@ class SocketTransceiver(TransceiverBase):
 
         Parameters
         ----------
-        address : Tuple[Any]
-            Address of a socket with which a socket object is connected.
+            address : Tuple[Any]
+                Address of a socket with which a socket object is connected.
         """
         socket = self._Addr2Socket.pop(address)
         del socket
@@ -186,8 +186,8 @@ class SocketTransceiver(TransceiverBase):
         
         Parameters
         ----------
-        socket : CommSocket
-            Socket to be closed.
+            socket : CommSocket
+                Socket to be closed.
         """
         del self._Addr2Socket[socket.addr_yours]
         del socket
@@ -244,8 +244,8 @@ class SocketTransceiver(TransceiverBase):
 
         Returns
         -------
-        CommSocket
-            A socket assosiated with a client.
+            CommSocket
+                A socket assosiated with a client.
         """
         while True:
             raw = self.recv_raw()
@@ -257,8 +257,43 @@ class SocketTransceiver(TransceiverBase):
         socket._recv_stream.add(data)
         
         return socket
+    
+    def get_socket(self, address: Tuple[Any]) -> CommSocket:
+        """Retreive a socket with the given address.
+
+        Parameters
+        ----------
+            address : Tuple[Any]
+                Address to be searched.
+
+        Returns
+        -------
+            CommSocket
+                Socket object with the given address.
+
+        Raises
+        ------
+            ValueError
+                Raised if the given address is invalid.
+        """
+        sock = self._Addr2Socket.get(address)
+        if sock is None:
+            raise ValueError(
+                "A socket with given 'address' does not exist."
+            )
+        return sock
+    
+    def list(self) -> List[Tuple[Any]]:
+        """Lists addresses associated with sockets still alive.
+
+        Returns
+        -------
+            List[Tuple[Any]]
+                Addresses associated with sockets still alive.
+        """
+        return list(self._Addr2Socket.keys())
         
-    def load(self, size: int = -1) -> None:
+    def load(self, size: int = -1, ignore: bool = False) -> None:
         """Update the buffers of sockets associated with the transceiver.
 
         Parameters
@@ -268,13 +303,30 @@ class SocketTransceiver(TransceiverBase):
         """
         count = 0
         while True:
-            is_success = self._load_single_data()
+            is_success = self._load_single_data(ignore=ignore)
             if not is_success:
                 break
             
             count += 1
             if count >= size:
                 break
+            
+    def _load_single_data(self, ignore: bool = False) -> bool:
+        raw = self._transceiver.recv_raw()
+        if len(raw) == 2:
+            addr, data = raw
+            socket = self._Addr2Socket.get(addr)
+            
+            if socket is not None:
+                socket._recv_stream.add(data)
+            else:
+                if not ignore:
+                    new_socket = self.create_socket(addr)
+                    new_socket._recv_stream.add(data)
+                    
+            return True
+        else:
+            return False
                 
     def flush(self, 
               socket: Optional[CommSocket] = None,
@@ -339,18 +391,6 @@ class SocketTransceiver(TransceiverBase):
                             args=(scheduled, ), 
                             kwargs={"period": period_used, "certain": certain_used})
             thread.start()
-        
-    def _load_single_data(self) -> bool:
-        raw = self._transceiver.recv_raw()
-        if len(raw) == 2:
-            addr, data = raw
-            socket = self._Addr2Socket.get(addr)
-            
-            if socket is not None:
-                socket._recv_stream.add(data)
-            return True
-        else:
-            return False
            
     def _flush_scheduled(self, 
                          scheduled: Deque[Tuple[Tuple[Any], bytes]], 
