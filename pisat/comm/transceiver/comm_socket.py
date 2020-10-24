@@ -87,6 +87,36 @@ class CommSocket(Component):
     def certain(self):
         return self._transceiver.certain
     
+    def encode(self, data: str) -> bytes:
+        """Encode str into bytes with certain encoding.
+
+        Parameters
+        ----------
+            data : str
+                Data to be encoded.
+
+        Returns
+        -------
+            bytes
+                Data encoded.
+        """
+        return self._transceiver.encode(data)
+    
+    def decode(self, data: Union[bytes, bytearray]) -> str:
+        """Decode bytes into str with certain encoding.
+
+        Parameters
+        ----------
+            data : Union[bytes, bytearray]
+                Data to be decoded.
+
+        Returns
+        -------
+            str
+                Data decoded.
+        """
+        return self._transceiver.decode(data)
+    
     def close(self) -> None:
         """Close this socket.
         

@@ -76,6 +76,38 @@ class TransceiverBase(Component):
         """
         pass
     
+    @classmethod
+    def encode(cls, data: str) -> bytes:
+        """Encode str into bytes with certain encoding.
+
+        Parameters
+        ----------
+            data : str
+                Data to be encoded.
+
+        Returns
+        -------
+            bytes
+                Data encoded.
+        """
+        pass
+    
+    @classmethod
+    def decode(cls, data: Union[bytes, bytearray]) -> str:
+        """Decode bytes into str with certain encoding.
+
+        Parameters
+        ----------
+            data : Union[bytes, bytearray]
+                Data to be decoded.
+
+        Returns
+        -------
+            str
+                Data decoded.
+        """
+        pass
+    
     # TODO to be overrided
     def recv_raw(self) -> Tuple[Tuple[Any], bytes]:
         """Receive raw data from the transceiver.

@@ -126,6 +126,10 @@ class SocketTransceiver(TransceiverBase):
         """
         self._certain = False
         
+    @classmethod
+    def encode(cls, data: str) -> bytes:
+        return 
+        
     def create_socket(self, 
                       address: Tuple[Any], 
                       maxlen: Optional[int] = None, 
@@ -206,6 +210,36 @@ class SocketTransceiver(TransceiverBase):
                 Whether the given address is valid or not.
         """
         return self._transceiver.check_addr(address)
+    
+    def encode(self, data: str) -> bytes:
+        """Encode str into bytes with certain encoding.
+
+        Parameters
+        ----------
+            data : str
+                Data to be encoded.
+
+        Returns
+        -------
+            bytes
+                Data encoded.
+        """
+        return self._transceiver.encode(data)
+    
+    def decode(self, data: Union[bytes, bytearray]) -> str:
+        """Decode bytes into str with certain encoding.
+
+        Parameters
+        ----------
+            data : Union[bytes, bytearray]
+                Data to be decoded.
+
+        Returns
+        -------
+            str
+                Data decoded.
+        """
+        return self._transceiver.decode(data)
     
     def recv_raw(self) -> Tuple[Tuple[Any], bytes]:
         """Receive raw data from wrapped transceiver.

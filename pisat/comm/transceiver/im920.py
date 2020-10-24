@@ -182,11 +182,35 @@ class Im920(TransceiverBase):
         
     @classmethod
     def encode(cls, data: str) -> bytes:
+        """Encode str into bytes with certain encoding.
+
+        Parameters
+        ----------
+            data : str
+                Data to be encoded.
+
+        Returns
+        -------
+            bytes
+                Data encoded.
+        """
         data_ascii = data.encode(cls.Packet.ENCODING_BASE.value)
         return codecs.encode(data_ascii, cls.Packet.ENCODING_TRANSMIT.value)
     
     @classmethod
     def decode(cls, data: Union[bytes, bytearray]) -> str:
+        """Decode bytes into str with certain encoding.
+
+        Parameters
+        ----------
+            data : Union[bytes, bytearray]
+                Data to be decoded.
+
+        Returns
+        -------
+            str
+                Data decoded.
+        """
         data_ascii = codecs.decode(bytes(data), cls.Packet.ENCODING_TRANSMIT.value)
         return data_ascii.decode()
     
