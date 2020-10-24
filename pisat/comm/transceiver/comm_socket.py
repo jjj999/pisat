@@ -15,9 +15,10 @@ SocketTransceiver object.
 Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
 """
 
-from typing import Optional, Union, Tuple, Any
+from typing import Optional, Union
 
 from pisat.base.component import Component
+from pisat.config.type import TypeAddress
 from pisat.comm.transceiver.comm_stream import CommBytesStream
 
 
@@ -36,8 +37,8 @@ class CommSocket(Component):
                  transceiver,
                  recv_stream: CommBytesStream,
                  send_stream: CommBytesStream,
-                 address_mine: Tuple[Any],
-                 address_yours: Tuple[Any],
+                 address_mine: TypeAddress,
+                 address_yours: TypeAddress,
                  name: Optional[str] = None) -> None:
         """
         Parameters
@@ -48,9 +49,9 @@ class CommSocket(Component):
                 Internal stream for receiveing data.
             send_stream : CommBytesStream
                 Internal stream for sending data.
-            address_mine : Tuple[Any]
+            address_mine : TypeAddress
                 Logical address of this socket.
-            address_yours : Tuple[Any]
+            address_yours : TypeAddress
                 Logical address of the other socket to communicate.
             name : Optional[str], optional
                 Name of this component, by default None
@@ -60,8 +61,8 @@ class CommSocket(Component):
         self._transceiver = transceiver
         self._recv_stream: CommBytesStream = recv_stream
         self._send_stream: CommBytesStream = send_stream
-        self._addr_mine: Tuple[Any] = address_mine
-        self._addr_yours: Tuple[Any] = address_yours
+        self._addr_mine: TypeAddress = address_mine
+        self._addr_yours: TypeAddress = address_yours
         
     @property
     def addr_mine(self):

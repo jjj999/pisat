@@ -20,9 +20,10 @@ pisat.comm.transceiver.CommSocket
 from collections import deque
 from enum import Enum
 from time import sleep
-from typing import Any, Deque, Dict, List, Optional, Tuple, Union
+from typing import Deque, Dict, List, Optional, Tuple, Union
 from threading import Thread
 
+from pisat.config.type import TypeAddress
 from pisat.comm.transceiver.transceiver_base import TransceiverBase
 from pisat.comm.transceiver.comm_stream import CommBytesStream
 from pisat.comm.transceiver.comm_socket import CommSocket
@@ -91,7 +92,7 @@ class SocketTransceiver(TransceiverBase):
             )
         
         self._transceiver: TransceiverBase = transceiver
-        self._Addr2Socket: Dict[Tuple[Any], CommSocket] = {}
+        self._Addr2Socket: Dict[TypeAddress, CommSocket] = {}
         self._period = period
         self._certain: bool = certain
         
@@ -131,14 +132,14 @@ class SocketTransceiver(TransceiverBase):
         return 
         
     def create_socket(self, 
-                      address: Tuple[Any], 
+                      address: TypeAddress, 
                       maxlen: Optional[int] = None, 
                       name: Optional[str] = None) -> CommSocket:
         """Create CommSocket object associated with the transceiver.
 
         Parameters
         ----------
-            address : Tuple[Any]
+            address : TypeAddress
                 Address of another socket to send data.
             maxlen : Optional[int], optional
                 Size of bytes of the internal buffer, by default None
@@ -168,7 +169,7 @@ class SocketTransceiver(TransceiverBase):
         
         return socket
     
-    def close(self, address: Tuple[Any]) -> None:
+    def close(self, address: TypeAddress) -> None:
         """Close a socket assosiated with given address.
         
         This method deletes a socket with the given address. After execution 
@@ -176,7 +177,7 @@ class SocketTransceiver(TransceiverBase):
 
         Parameters
         ----------
-            address : Tuple[Any]
+            address : TypeAddress
                 Address of a socket with which a socket object is connected.
         """
         socket = self._Addr2Socket.pop(address)
@@ -196,12 +197,12 @@ class SocketTransceiver(TransceiverBase):
         del self._Addr2Socket[socket.addr_yours]
         del socket
         
-    def check_addr(self, address: Tuple[Any]) -> bool:
+    def check_addr(self, address: TypeAddress) -> bool:
         """Check if the given address is valid or not.
 
         Parameters
         ----------
-            address : Tuple[Any]
+            address : TypeAddress
                 Address to be judged.
 
         Returns
@@ -241,22 +242,22 @@ class SocketTransceiver(TransceiverBase):
         """
         return self._transceiver.decode(data)
     
-    def recv_raw(self) -> Tuple[Tuple[Any], bytes]:
+    def recv_raw(self) -> Tuple[TypeAddress, bytes]:
         """Receive raw data from wrapped transceiver.
 
         Returns
         -------
-            Tuple[Tuple[Any], bytes]
+            Tuple[TypeAddress, bytes]
                 Address which data is from, and raw data.
         """
         return self._transceiver.recv_raw()
     
-    def send_raw(self, address: Tuple[Any], data: Union[bytes, bytearray]) -> bool:
+    def send_raw(self, address: TypeAddress, data: Union[bytes, bytearray]) -> bool:
         """Send raw data to the transceiver which has the given address.
 
         Parameters
         ----------
-            address : Tuple[Any]
+            address : TypeAddress
                 Address to which the data is to be send.
             data : Union[bytes, bytearray]
                 Data to be send.
@@ -292,12 +293,12 @@ class SocketTransceiver(TransceiverBase):
         
         return socket
     
-    def get_socket(self, address: Tuple[Any]) -> CommSocket:
+    def get_socket(self, address: TypeAddress) -> CommSocket:
         """Retreive a socket with the given address.
 
         Parameters
         ----------
-            address : Tuple[Any]
+            address : TypeAddress
                 Address to be searched.
 
         Returns
@@ -317,12 +318,12 @@ class SocketTransceiver(TransceiverBase):
             )
         return sock
     
-    def list(self) -> List[Tuple[Any]]:
+    def list(self) -> List[TypeAddress]:
         """Lists addresses associated with sockets still alive.
 
         Returns
         -------
-            List[Tuple[Any]]
+            List[TypeAddress]
                 Addresses associated with sockets still alive.
         """
         return list(self._Addr2Socket.keys())
@@ -403,7 +404,7 @@ class SocketTransceiver(TransceiverBase):
         period_used = period if period is not None else self.period
         certain_used = certain if certain is not None else self.certain
         
-        scheduled: Deque[Tuple[Tuple[Any], bytes]] = deque()
+        scheduled: Deque[Tuple[TypeAddress, bytes]] = deque()
         
         if socket is None:
             for sock in self._Addr2Socket.values():
@@ -427,7 +428,7 @@ class SocketTransceiver(TransceiverBase):
             thread.start()
            
     def _flush_scheduled(self, 
-                         scheduled: Deque[Tuple[Tuple[Any], bytes]], 
+                         scheduled: Deque[Tuple[TypeAddress, bytes]], 
                          period: float = 0.,
                          certain: bool = True) -> None:
         try:
@@ -448,7 +449,7 @@ class SocketTransceiver(TransceiverBase):
         except:
             pass
         
-    def _retreive_send_data(self, socket: CommSocket) -> Deque[Tuple[Tuple[Any], bytes]]:
+    def _retreive_send_data(self, socket: CommSocket) -> Deque[Tuple[TypeAddress, bytes]]:
         que = deque()
         while True:
             data = socket._send_stream.pop(self._transceiver.Packet.MAX.value)

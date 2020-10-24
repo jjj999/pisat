@@ -15,10 +15,13 @@ pisat.adapter
 pisat.core.logger.SensorController
 """
 
-from typing import Union
+from typing import Tuple, Union
 
 
 # Logable means this type of object can be logged by DataLogger.
 # A subject to be logged and saved into a log file must be
 # Logable type.
 Logable = Union[int, float, str]
+
+# This type is for addresses of TransceiverBase and its subclasses.
+TypeAddress = Tuple[Union[int, str]]
