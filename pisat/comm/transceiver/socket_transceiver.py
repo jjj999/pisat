@@ -269,13 +269,17 @@ class SocketTransceiver(TransceiverBase):
         """
         return self._transceiver.send_raw(address, data)
     
-    def listen(self, timeout: Union[float, int] = -1.) -> CommSocket:
+    def listen(self, timeout: Union[float, int] = -1.) -> Optional[CommSocket]:
         """Make the object be a server and wait a connection.
         
         This method sets the SocketTransceiver object the server mode. 
         In the server mode, the method waits a connection from any clients 
         and blocks execution. Once a connection is detected, this method 
         makes a socket assosiated with the client and returns it.
+        
+        If parameter 'timeout' is set and the time is passed, this method 
+        may returns None. Otherwise, this method will return a CommSocket 
+        object.
         
         Parameters
         ----------
@@ -284,7 +288,7 @@ class SocketTransceiver(TransceiverBase):
 
         Returns
         -------
-            CommSocket
+            Optional[CommSocket]
                 A socket assosiated with a client.
         """
         if not isinstance(timeout, (float, int)):
@@ -302,7 +306,7 @@ class SocketTransceiver(TransceiverBase):
                 continue
             
             if time() - time_init > timeout:
-                break
+                return None
         
         addr, data = raw
         socket = self.create_socket(addr)
