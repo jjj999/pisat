@@ -19,7 +19,7 @@ pisat.comm.transceiver.CommSocket
 
 from collections import deque
 from enum import Enum
-from time import sleep
+from time import time, sleep
 from typing import Deque, Dict, List, Optional, Tuple, Union
 from threading import Thread
 
@@ -269,22 +269,39 @@ class SocketTransceiver(TransceiverBase):
         """
         return self._transceiver.send_raw(address, data)
     
-    def listen(self) -> CommSocket:
+    def listen(self, timeout: Union[float, int] = -1.) -> CommSocket:
         """Make the object be a server and wait a connection.
         
         This method sets the SocketTransceiver object the server mode. 
         In the server mode, the method waits a connection from any clients 
         and blocks execution. Once a connection is detected, this method 
         makes a socket assosiated with the client and returns it.
+        
+        Parameters
+        ----------
+            timeout : Union[float, int], default -1.
+                Timeout to quit execution.
 
         Returns
         -------
             CommSocket
                 A socket assosiated with a client.
         """
+        if not isinstance(timeout, (float, int)):
+            raise TypeError(
+                "'timeout' must be float or int."
+            )
+        
+        time_init = time()
         while True:
             raw = self.recv_raw()
             if len(raw) == 2:
+                break
+            
+            if timeout < 0.:
+                continue
+            
+            if time() - time_init > timeout:
                 break
         
         addr, data = raw
