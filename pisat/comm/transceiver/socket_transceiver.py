@@ -349,13 +349,15 @@ class SocketTransceiver(TransceiverBase):
         """
         return list(self._Addr2Socket.keys())
         
-    def load(self, size: int = -1, ignore: bool = False) -> None:
+    def load(self, size: int = -1, ignore: bool = True) -> None:
         """Update the buffers of sockets associated with the transceiver.
 
         Parameters
         ----------
             size : int, optional
                 Number of packets to be loaded, by default -1
+            ignore : bool, default True
+                If unregistered address is ignored or not
         """
         count = 0
         while True:
@@ -367,7 +369,7 @@ class SocketTransceiver(TransceiverBase):
             if count >= size:
                 break
             
-    def _load_single_data(self, ignore: bool = False) -> bool:
+    def _load_single_data(self, ignore: bool = True) -> bool:
         raw = self._transceiver.recv_raw()
         if len(raw) == 2:
             addr, data = raw
@@ -375,6 +377,9 @@ class SocketTransceiver(TransceiverBase):
             
             if socket is not None:
                 socket._recv_stream.add(data)
+            
+            # NOTE If the sender's socket has not been registered before,
+            # then handling depends on the state of 'ignore'.
             else:
                 if not ignore:
                     new_socket = self.create_socket(addr)
