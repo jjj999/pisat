@@ -11,6 +11,7 @@ from pisat.util.deco import restricted_setter, restricted_range_setter
 
 class Opt3002(SensorBase):
     
+    # TODO
     DATA_NAMES: Tuple[str] = ("IRRADIANCE")
     DEFAULT_VALUES: Dict[str, Logable] = {}
     
@@ -255,9 +256,11 @@ class Opt3002(SensorBase):
         self._handler: Optional[I2CHandlerBase] = handler
         self._config = self.Config()
         
+    # TODO
     def readf(self, *dnames: Tuple[str, ...]) -> List[Logable]:
         pass
     
+    # TODO
     def read(self, *dnames: Tuple[str, ...]) -> Dict[str, Logable]:
         pass
     
@@ -273,9 +276,6 @@ class Opt3002(SensorBase):
     def _read_raw_data(self) -> Tuple[int]:
         count, data = self._handler.read(self.Reg.RESULT, self.Reg.LEN_BYTE)
         return self.Data.parse_raw_data(data)
-    
-    def _read_config(self):
-        pass
     
     def set_high_limit(self, data: float) -> None:
         self._set_limit(self.Reg.LIMIT_HIGH, data)
