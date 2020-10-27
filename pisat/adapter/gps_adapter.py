@@ -201,7 +201,13 @@ class GpsAdapter(AdapterBase):
     def calc_angle_from_north(cls,
                               coordinate: Union[Tuple[float], List[float]],
                               isradan: bool = True) -> float:
-        radian = math.atan2(coordinate[0], coordinate[1])
+        # positive --> ccw
+        # negative --> cw
+        radian = - math.atan2(coordinate[0], coordinate[1])
+        
+        # range --> (-90, 90]
+        if math.isclose(radian, - 90., abs_tol=2e-10):
+            radian = 90.
 
         if isradan:
             return radian
