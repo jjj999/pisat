@@ -19,15 +19,16 @@ pigpio API
 
 from typing import *
 
-import pigpio
-
+from pisat.util.platform import is_raspberry_pi
 from pisat.handler.i2c_handler_base import I2CHandlerBase
 
+if is_raspberry_pi():
+    import pigpio
 
 class PigpioI2CHandler(I2CHandlerBase):
 
     def __init__(self,
-                 pi: pigpio.pi,
+                 pi,
                  address: int,
                  bus: int = 1,
                  flag: int = 0,

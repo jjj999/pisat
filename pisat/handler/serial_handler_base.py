@@ -46,6 +46,9 @@ class SerialHandlerBase(HandlerBase):
         cursor = 0
         tail = len(end)
         while True:
+            if not self.counts_readable:
+                break
+            
             count, char = self.read(1)
             result.extend(char)
             
@@ -55,8 +58,6 @@ class SerialHandlerBase(HandlerBase):
                     for _ in range(tail):
                         result.pop()
                     break
-            if not self.counts_readable:
-                break
             
         return bytes(result)
     
