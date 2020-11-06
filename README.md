@@ -2,7 +2,7 @@
 
 ## Overview
 
-pisat は[東北大学 From The Earth](https://www.fte-tohoku.org/) の CanSat チームが開発しているロボットフレームワークです．
+pisat はロボットや IoT 機器を製作するための Python フレームワークです．
 現時点では Raspberry Pi の GPIO のみ対応しています．
 詳細は[開発者用ドキュメント](./docs/developer/)を参照してください．
 
