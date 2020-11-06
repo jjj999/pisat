@@ -60,6 +60,67 @@ from pisat.config.dname import (
 )
 
 
+class GpsDataModelBuilder:
+
+    class GGAModel:
+        
+        FORMAT = b"GGA"
+        
+        def __init__(self, sentence: bytes) -> None:
+            pass
+        
+    class GLLModel:
+        
+        FORMAT = b"GLL"
+        
+        def __init__(self, sentence: bytes) -> None:
+            pass
+        
+    class GSAModel:
+        
+        FORMAT = b"GSA"
+        
+        def __init__(self, sentence: bytes) -> None:
+            pass
+        
+    class GSVModel:
+        
+        FORMAT = b"GSV"
+        
+        def __init__(self, sentence: bytes) -> None:
+            pass
+        
+    class RMCModel:
+        
+        FORMAT = b"RMC"
+        
+        def __init__(self, sentence: bytes) -> None:
+            pass
+        
+    class VTGModel:
+        
+        FORMAT = b"VTG"
+        
+        def __init__(self, sentence: bytes) -> None:
+            pass
+        
+    class ZDAModel:
+        
+        FORMAT = b"ZDA"
+        
+        def __init__(self, sentence: bytes) -> None:
+            pass
+        
+    MODELS = (GGAModel, GLLModel, GSAModel, GSVModel, RMCModel, VTGModel, ZDAModel)
+        
+    @classmethod
+    def build(cls, format_name: bytes):
+        model_obj = None
+        for model in cls.MODELS:
+            if format_name == model.FORMAT:
+                target = model()
+
+
 class GPSParser:
 
     class Sentense(Enum):
