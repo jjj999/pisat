@@ -1,6 +1,4 @@
-from pisat.sensor.sensor_base import SensorInterface
-from pisat.sensor.sensor_base import SensorGroup
-from pisat.sensor.sensor_base import SensorBase
+from pisat.sensor.sensor_base import SensorBase, SensorGroup
 
 from pisat.sensor.sensor_base import HandlerMismatchError
 from pisat.sensor.sensor_base import HandlerNotSetError
