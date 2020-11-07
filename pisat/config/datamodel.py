@@ -1,6 +1,6 @@
 
 import inspect
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Dict, Optional, Tuple, Type
 
 
 class loggable:
@@ -40,7 +40,7 @@ class DataModelBase:
         
     @property
     def generate_component(self):
-        return self._gen
+        return self._comp_name
     
     @classmethod
     def get_loggables(cls):
@@ -52,3 +52,4 @@ class DataModelBase:
             result.update(val.extract(self))
             
         return result
+        

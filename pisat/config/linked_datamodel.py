@@ -2,7 +2,7 @@
 import inspect
 from typing import Any, Dict, List, Optional, Tuple
 
-from pisat.config.loggable import loggable, DataModelBase
+from pisat.config.datamodel import loggable, DataModelBase
 
     
 class LinkNotSetError(Exception):
@@ -17,28 +17,32 @@ class linked_loggable(loggable):
                  comp_name: str) -> None:
         super().__init__(loggable._fget)
         self._loggable = loggable
-        self._obj = None
+        self._model = None
         self._comp_name = comp_name
     
     def __get__(self, obj: Any, type: Optional[type] = None):
         if obj is None:
             return self
         if self._fget is not None:
-            if self._obj is not None:
-                return self._fget(self._obj)
+            if self._model is not None:
+                return self._fget(self._model)
             else:
                 raise LinkNotSetError(
                     "An object which links to the loggable is not set."
                 )
+                
+    @property
+    def generate_component(self):
+        return self._comp_name
     
     def extract(self, obj: Any) -> str:
         if self._fmat is None:
-            return self._loggable._fmat(self._obj)
+            return self._loggable._fmat(self._model)
         else:
             return self._fmat(obj)
         
-    def sync(self, obj: DataModelBase):
-        self._obj = obj
+    def sync(self, model: DataModelBase):
+        self._model = model
         
         
 class LinkedDataModelBase(DataModelBase):
@@ -51,20 +55,20 @@ class LinkedDataModelBase(DataModelBase):
     def _get_Name2Link(cls) -> Dict[str, List[linked_loggable]]:
         result = {}
         for _, val in cls.get_loggables():
-            d = result.get(val._comp_name)
+            d = result.get(val.generate_component)
             if d is None:
-                result[val._comp_name] = [val]
+                result[val.generate_component] = [val]
             else:
-                result[val._comp_name].append(val)
+                result[val.generate_component].append(val)
                 
         return result
     
-    def sync(self, *obj: Tuple[DataModelBase, ...]):
+    def sync(self, *models: DataModelBase):
         Name2Link = self._get_Name2Link()
         
-        for o in obj:
-            links = Name2Link.get(o._comp_name)
+        for model in models:
+            links = Name2Link.get(model.generate_component)
             if links is not None:
                 for link in links:
-                    link.sync(o)
+                    link.sync(model)
     
