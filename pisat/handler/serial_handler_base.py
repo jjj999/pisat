@@ -55,9 +55,9 @@ class SerialHandlerBase(HandlerBase):
             if ord(char) == end[cursor]:
                 cursor += 1
                 if cursor == tail:
-                    for _ in range(tail):
-                        result.pop()
                     break
+            else:
+                cursor = 0
             
         return bytes(result)
     
