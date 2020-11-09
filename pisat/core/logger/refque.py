@@ -17,14 +17,17 @@ OTHER INFORMATION
 
 from threading import Lock
 from collections import deque
-from typing import Deque, Dict, Optional
+from typing import Deque,  Generic, Optional, TypeVar
 from copy import deepcopy
 
-from pisat.config.type import Logable
 from pisat.base.component import Component
+from pisat.model.datamodel import DataModelBase
 
 
-class RefQueue(Component):
+Model = TypeVar("Model", DataModelBase)
+
+
+class RefQueue(Component, Generic[Model]):
     """Queue with a lock.
     
     This object is often used for retrieving data same as LogQueue
@@ -51,13 +54,13 @@ class RefQueue(Component):
         super().__init__(name)
         
         self._lock: Lock = Lock()
-        self._que: Deque[Dict[str, Logable]] = deque(maxlen=maxlen)
+        self._que: Deque[Model] = deque(maxlen=maxlen)
     
     @property
     def islocked(self) -> bool:
         return self._lock.locked()
         
-    def get(self) -> Deque[Dict[str, Logable]]:
+    def get(self) -> Deque[Model]:
         """Get deep copy of inner deque in the way of thread safe.
 
         Returns
@@ -69,7 +72,7 @@ class RefQueue(Component):
             que = deepcopy(self._que)
         return que
     
-    def append(self, x: Dict[str, Logable]):
+    def append(self, x: Model):
         """Append data into inner deque.
 
         Parameters

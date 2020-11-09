@@ -20,17 +20,21 @@ pisat.core.logger.DictLogQueue
 
 """
 
-
-from typing import Any, Deque, Optional
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
+import csv
 import math
+from typing import Any, Deque, Generic, Optional, Type, TypeVar
 
 from pisat.base.component import Component
+from pisat.model.datamodel import DataModelBase
 from pisat.util.about_time import get_time_stamp
 
 
-class LogQueue(Component):
+Model = TypeVar("Model", DataModelBase)
+
+
+class LogQueue(Component, Generic[Model]):
     """Queue to manage data log with multiple threads.
 
     An abstract container class of data logged by logging classes such as 
@@ -74,10 +78,13 @@ class LogQueue(Component):
 
         self._limit_main: int = maxlen
         self._limit_sub: int = 0
-        self._path: str = get_time_stamp(
-            self.FILE_NAME_DEFAULT, self.FILE_EXTENSION_DEFAULT) if not path else path
-        self._thpool: ThreadPoolExecutor = ThreadPoolExecutor(
-            max_workers=self.THREAD_MAX_WORKERS)
+        self._path = path
+        self._thpool: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=self.THREAD_MAX_WORKERS)
+        self._dnames = None
+        self._first = True
+        
+        if path is None:
+            self._path = get_time_stamp(self.FILE_NAME_DEFAULT, self.FILE_EXTENSION_DEFAULT)
 
         #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
         #   Inner Queues                                                            #
@@ -90,14 +97,11 @@ class LogQueue(Component):
         #           because of appending data.                                      #
         #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
 
-        len_sub: int = self._calc_sublen(self._limit_main)
-        self._queue_main: Deque[Any] = deque(
-            maxlen=self._limit_main + self.LEN_ADDING_TAIL)
-        self._queue_sub1: Deque[Any] = deque(
-            maxlen=len_sub + self.LEN_ADDING_TAIL)
-        self._queue_sub2: Deque[Any] = deque(
-            maxlen=len_sub + self.LEN_ADDING_TAIL)
-        self._queue_sub: Deque[Any] = self._queue_sub1
+        len_sub = self._calc_sublen(self._limit_main)
+        self._queue_main: Deque[Model] = deque(maxlen=self._limit_main + self.LEN_ADDING_TAIL)
+        self._queue_sub1: Deque[Model] = deque(maxlen=len_sub + self.LEN_ADDING_TAIL)
+        self._queue_sub2: Deque[Model] = deque(maxlen=len_sub + self.LEN_ADDING_TAIL)
+        self._queue_sub: Deque[Model] = self._queue_sub1
         self._limit_sub: int = len_sub
 
         self.create_newfile(self._path)
@@ -120,7 +124,7 @@ class LogQueue(Component):
                 (cls.LEN_MAX_SUB - cls.LEN_MIN_SUB) * \
                 int(math.log10(len_main / cls.LEN_STANDARD_SMALL))
 
-    def _exchange_subque(self) -> Deque[Any]:
+    def _exchange_subque(self) -> Deque[Model]:
         """Exchange the reference of subque.
 
         Returns
@@ -145,12 +149,12 @@ class LogQueue(Component):
     @property
     def path(self):
         return self._path
-
-    def create_newfile(self,
-                       path: Optional[str] = None,
+    
+    def create_newfile(self, 
+                       path: Optional[str] = None, 
                        isexist: bool = False) -> None:
         """Creates new file for saving data log.
-
+        
         The created file is used for the file into which data log is saved.
         The old file is never used for it.
 
@@ -162,22 +166,46 @@ class LogQueue(Component):
                 whether the file exists, by default False.
         """
         if path is None:
-            self._path = get_time_stamp(
-                self.FILE_NAME_DEFAULT, self.FILE_EXTENSION_DEFAULT)
+            self._path = get_time_stamp(self.FILE_NAME_DEFAULT, self.FILE_EXTENSION_DEFAULT)
         elif isinstance(path, str):
             self._path = path
         else:
             raise TypeError(
                 "'path' must be str or None."
             )
-
+            
+        if not isexist:
+            self._first = True
+            with open(self._path, "wt") as f:
+                pass
+            
+    def _write(self, que: Deque[Model]) -> None:
+        if not len(que):
+            return
+        
+        with open(self._path, "at", newline="") as f:
+            if self._first:
+                self._dnames = que[0].extract().keys()
+                
+            writer = csv.DictWriter(f, self._dnames)
+            if self._first:
+                writer.writeheader()
+                self._first = False
+                
+            while len(que):
+                writer.writerow(que.popleft().extract())
+                
     def close(self) -> None:
         """Execute post-process of logging.
 
-        This method must be implemented in subclasses as all data 
-        is saved into a file with no contradiction.
+        Notes
+        -----
+            If the method is not called and a program finishes, 
+            then some cached data may not be saved into a file.
         """
         self._thpool.shutdown()
+        self._write(self._queue_sub)
+        self._write(self._queue_main)
 
     #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
     #   Context Manager                                                         #
@@ -191,7 +219,7 @@ class LogQueue(Component):
     #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
     #   Data Appending                                                          #
     #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
-    def append(self, x: Any) -> None:
+    def append(self, x: Model) -> None:
         """Append data.
 
         Parameters
@@ -207,25 +235,8 @@ class LogQueue(Component):
             if len(self._queue_sub) >= self._limit_sub:
                 self.update()
 
-    def _update(self, d: Deque[Any]) -> None:
-        """subroutine to submit to the thread pool.
-        
-        This method must be implemented in subclasses as all given data 
-        is saved into a file and given sub queue is cleared up.
-
-        The subroutine plays a role in writing data log which has been
-        piled up because of continuous logging. In other words, this 
-        method saves data in 'sub queue' into a file.
-
-        Parameters
-        ----------
-            d : Deque[Any]
-                sub queue
-        """
-        pass
-
     def update(self) -> None:
         """Exchange sub queue and save the old one.
         """
         d = self._exchange_subque()
-        self._thpool.submit(self._update, d)
+        self._thpool.submit(self._write, d)

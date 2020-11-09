@@ -22,18 +22,20 @@ pisat.core.logger.LogQueue
 pisat.core.logger.RefQueue
 """
 
-from typing import Deque, Dict, List, Optional, Union
+from typing import Dict, Generic, Optional, Type, TypeVar
 
-from pisat.config.type import Logable
 from pisat.base.component_group import ComponentGroup
-from pisat.adapter.adapter_base import AdapterBase
 from pisat.sensor.sensor_base import SensorBase
 from pisat.core.logger.logque import LogQueue
 from pisat.core.logger.refque import RefQueue
 from pisat.core.logger.sensor_controller import SensorController
+from pisat.model.linked_datamodel import LinkedDataModelBase
 
 
-class DataLogger(ComponentGroup):
+LinkedModel = TypeVar("LinkedModel", LinkedDataModelBase)
+
+
+class DataLogger(ComponentGroup, Generic[LinkedModel]):
     """Basic data logger class.
     
     A top level class of data logging. This class integrates 
@@ -57,6 +59,7 @@ class DataLogger(ComponentGroup):
                  con: SensorController,
                  que: LogQueue,
                  reflen: int = 100,
+                 modelclass: Optional[LinkedModel] = None,
                  name: Optional[str] = None):
         """
         Parameters
@@ -75,6 +78,7 @@ class DataLogger(ComponentGroup):
         self._con: SensorController = con
         self._que: LogQueue = que
         self._refque: RefQueue = RefQueue(maxlen=reflen)
+        self._modelclass: Optional[LinkedModel] = modelclass
         
         super().append(con, que, self._refque)
         
@@ -86,7 +90,7 @@ class DataLogger(ComponentGroup):
     def refqueue(self):
         return self._refque
     
-    def append(self, *args) -> None:
+    def append(self, *sensors) -> None:
         """Append and set Sensors or Adapters into SensorController
         
         Parameters
@@ -98,141 +102,10 @@ class DataLogger(ComponentGroup):
         --------
             pisat.core.logger.SensorController : SensorController.append is used inside.
         """
-        super().append(*args)
-        self._con.append(*args)
+        super().append(*sensors)
+        self._con.append(*sensors)
         
-    def reset(self, obj: Union[SensorBase, AdapterBase], dname: Optional[str] = None) -> None:
-        """Reset readability setting about given object.
-        
-        The methods resets readability setting changed by other operations in the past.
-        If 'dname' is None, then all data of the given object is to be reset their 
-        readabilities.
-
-        Parameters
-        ----------
-            obj : Union[SensorBase, AdapterBase]
-                SensorBase or AdapterBase whose data readability is to be reset.
-            dname : Optional[str], optional
-                Data name to be reset, by default None
-                
-        Notes
-        -----
-            'Readability' means whether a kind of data of Sensor or Adapter can be 
-            read. The readability setting can be changed by calling 'concentrate' or 
-            'ignore' or 'remove' methods, and it can be reset by 'reset' method.
-            This feature of DataLogger derived from SensorController, 
-            originally SensorGroup and AdapterGroup.
-    
-        See Also
-        --------
-            pisat.core.logger.SensorController : SensorController.reset is used inside.
-        """
-        self._con.reset(obj, dname)
-        
-    def reset_all(self, sensor: bool = True, adapter: bool = True):
-        """Reset all readability setting.
-
-        Parameters
-        ----------
-            sensor : bool, optional
-                If reset readabilities of internal sensors, by default True
-            adapter : bool, optional
-                If reset readabilities of internal adapters, by default True
-        
-        Notes
-        -----
-            'Readability' means whether a kind of data of Sensor or Adapter can be 
-            read. The readability setting can be changed by calling 'concentrate' or 
-            'ignore' or 'remove' methods, and it can be reset by 'reset' method.
-            
-        See Also
-        --------
-            pisat.core.logger.SensorController : SensorController.reset_all is used inside.
-        """
-        self._con.reset_all(sensor=sensor, adapter=adapter)
-        
-    def recollect(self, dname: str, sensor: bool = True, adapter: bool = True):
-        """Reset the readability of given data name.
-
-        Parameters
-        ----------
-            dname : str
-                Data name whose readability is to be reset.
-            sensor : bool, optional
-                If reset readabilities of internal sensors, by default True
-            adapter : bool, optional
-                If reset readabilities of internal adapters, by default True
-            
-        Notes
-        -----
-            'Readability' means whether a kind of data of Sensor or Adapter can be 
-            read. The readability setting can be changed by calling 'concentrate' or 
-            'ignore' or 'remove' methods, and it can be reset by 'reset' method.
-            
-        See Also
-        --------
-            pisat.core.logger.SensorController : SensorController.recollect is used inside.
-        """
-        self._con.recollect(dname, sensor=sensor, adapter=adapter)
-        
-    def concentrate(self, dname: str, obj: Union[SensorBase, AdapterBase]) -> None:
-        """Limit readability of given data to given object.
-        
-        The method changes readability setting of the given data as only data 
-        emitted from the given 'obj' is adopted as the data. This method only 
-        makes sense when several object can read the given data. 
-
-        Parameters
-        ----------
-            dname : str
-                Data name.
-            obj : Union[SensorBase, AdapterBase]
-                Sensor or Adapter to be concentrated.
-            
-        Notes
-        -----
-            'Readability' means whether a kind of data of Sensor or Adapter can be 
-            read. The readability setting can be changed by calling 'concentrate' or 
-            'ignore' or 'remove' methods, and it can be reset by 'reset' method.
-            This feature of DataLogger derived from SensorController, 
-            originally SensorGroup and AdapterGroup.
-        
-        See Also
-        --------
-            pisat.core.logger.SensorController : SensorController.concentrate is used inside.
-        """
-        self._con.concentrate(dname, obj)
-        
-    def ignore(self, dname: str, obj: Union[None, SensorBase, AdapterBase] = None) -> None:
-        """Change readability of given data to be ignored.
-        
-        The method changes readability setting of the given data as ignored 
-        when 'read' method is called. if 'obj' is None, the given data completely 
-        ignored, but if 'obj' is given, then the given 'obj' is ignored as for 
-        reading the given data.
-
-        Parameters
-        ----------
-            dname : str
-                Data Name.
-            obj : Union[None, SensorBase, AdapterBase], optional
-                Sensor or Adapter to be ignored, by default None
-                
-        Notes
-        -----
-            'Readability' means whether a kind of data of Sensor or Adapter can be 
-            read. The readability setting can be changed by calling 'concentrate' or 
-            'ignore' or 'remove' methods, and it can be reset by 'reset' method.
-            This feature of DataLogger derived from SensorController, 
-            originally SensorGroup and AdapterGroup.
-            
-        See Also
-        --------
-            pisat.core.logger.SensorController : SensorController.ignore is used inside.
-        """
-        self._con.ignore(dname, obj)
-        
-    def remove(self, obj: Union[SensorBase, AdapterBase]) -> None:
+    def remove(self, sensor: SensorBase) -> None:
         """Remove given object from readabilities of all data.
         
         The method changes readability settings of all data as 'obj' is ignored 
@@ -257,34 +130,9 @@ class DataLogger(ComponentGroup):
         --------
             pisat.core.logger.SensorController : SensorController.remove is used inside.
         """
-        self._con.remove(obj)
+        self._con.remove(sensor)
         
-    def delete(self, obj: Union[SensorBase, AdapterBase]) -> None:
-        """Remove given object completely.
-        
-        This method removes the given object from internal sensors set 
-        if the object is a sensor, else from internal adapters set. 
-        Thus, Users cannot reset the readability of the object after 
-        calling this method.
-
-        Parameters
-        ----------
-            obj : Union[SensorBase, AdapterBase]
-                Sensor or Adapter to be removed.
-            
-        Notes
-        -----
-            'Readability' means whether a kind of data of Sensor or Adapter can be 
-            read. The readability setting can be changed by calling 'concentrate' or 
-            'ignore' or 'remove' methods, and it can be reset by 'reset' method.
-            
-        See Also
-        --------
-            pisat.core.logger.SensorController : SensorController.delete is used inside.
-        """
-        self._con.delete(obj)
-        
-    def get_sensor(self, dname: str) -> List[SensorBase]:
+    def get_sensors(self) -> Dict[str, SensorBase]:
         """Search Sensor objects from data name.
 
         Parameters
@@ -301,28 +149,17 @@ class DataLogger(ComponentGroup):
         --------
             pisat.core.logger.SensorController : SensorController.get_sensor is used inside.
         """
-        return self._con.get_sensor(dname)
+        return self._con.get_sensors()
     
-    def get_adapter(self, dname: str) -> List[AdapterBase]:
-        """Search Adapter objects from data name.
-
-        Parameters
-        ----------
-            dname : str
-                Data name to search.
-
-        Returns
-        -------
-            List[AdapterBase]
-                Searched Adapter objects.
-            
-        See Also
-        --------
-            pisat.core.logger.SensorController : SensorController.get_adapter is used inside.
-        """
-        return self._con.get_adapter(dname)
+    def set_model(self, modelclass: Type[LinkedModel]) -> None:
+        if issubclass(modelclass, LinkedDataModelBase):
+            self._modelclass = modelclass
+        else:
+            raise TypeError(
+                f"'modelclass' must be a subclass of {LinkedDataModelBase.__name__}."
+            )
                 
-    def read(self, *dnames) -> Dict[str, Logable]:
+    def read(self):
         """Execute transaction for reading, caching and saving data log.
 
         Returns
@@ -336,10 +173,17 @@ class DataLogger(ComponentGroup):
             pisat.core.logger.LogQueue : LogQueue.append is used inside.
             pisat.core.logger.RefQueue : RefQueue.append is used inside.
         """
-        data = self._con.read(*dnames)
-        self._que.append(data)
-        self._refque.append(data)
-        return data
+        model = self._con.read()
+        self._que.append(model)
+        
+        if self._modelclass is None:
+            self._refque.append(model)
+            return model
+        else:
+            linked = self._modelclass(self.name)
+            linked.sync(model)
+            self._refque.append(linked)
+            return linked
     
     def close(self):
         """Execute post-process of logging.
