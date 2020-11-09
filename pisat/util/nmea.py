@@ -1,494 +1,553 @@
-#! python3
-
-"""
-
-pisat.sensor.sensor.
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-DESCRIPTION
 
 
-[author]
-AUTHOR NAME, ORGANIZATION NAME
+import re
+from typing import Dict, Optional, Tuple, Type, Union
 
-[info]
-OTHER INFORMATION
+from pisat.model.datamodel import DataModelBase, loggable
+from pisat.util.type import empty_None
+
+
+class NMEAModelBase(DataModelBase):
     
-"""
-
-from math import radians
-from typing import Dict, Optional, Union, Tuple
-from enum import Enum
-
-from pisat.config.type import Logable
-from pisat.config.dname import (
-    GPS_ALTITUDE_GEOID,
-    GPS_ALTITUDE_GEOID_UNIT,
-    GPS_ALTITUDE_SEALEVEL,
-    GPS_ALTITUDE_SEALEVEL_UNIT,
-    GPS_ANGLE_AZIMUTH_SATTELITE,
-    GPS_ANGLE_ELEVATION_SATTELITE,
-    GPS_ANGLE_TWONORTH_EW,
-    GPS_BODY_MAGNETIC_ANGLE_VELOCITY,
-    GPS_BODY_TRUE_ANGLE_VELOCITY,
-    GPS_BODY_VELOCITY_KM,
-    GPS_BODY_VELOCITY_KNOT,
-    GPS_CHECK_SUM,
-    GPS_DATE_UTC,
-    GPS_DIFF_ANGLE_TWONORTH,
-    GPS_ID_DIFF_POINT,
-    GPS_LATITUDE,
-    GPS_LATITUDE_NS,
-    GPS_LONGITUDE,
-    GPS_LONGITUDE_EW,
-    GPS_MODE,
-    GPS_NUMBER_SATELLITE,
-    GPS_HOWMANY_SATELLITES_IN_VIEW,
-    GPS_HOWMANY_SENTENCES_GSV,
-    GPS_NUMBER_SENTENCE_GSV,
-    GPS_NUMBERS_SATELLITE,
-    GPS_HOWMANY_SATELLITES_USED,
-    GPS_QUALITY_POSITION,
-    GPS_RATE_DECLINE_QUALITY_HORIZONTAL,
-    GPS_RATE_DECLINE_QUALITY_POSITION,
-    GPS_RATE_DECLINE_QUALITY_VERTICAL,
-    GPS_RATIO_CARRIER_NOISE, 
-    GPS_SATELLITE_INFO,
-    GPS_STATUS,
-    GPS_TIME_FROM_LATEST_DGPS,
-    GPS_TIME_UTC,
-    GPS_TYPE_DETECT
-)
-
-
-class GpsDataModelBuilder:
-
-    class GGAModel:
+        FORMAT: str = None
+        NUM_FIELDS: int = 0
         
-        FORMAT = b"GGA"
+        def setup(self, fields: Tuple[str]):           
+            self._talker = fields[0][:2]
+            self._type = fields[0][2:]
+            self._checksum = empty_None(fields[-1])
         
-        def __init__(self, sentence: bytes) -> None:
-            pass
+        @loggable
+        def talker(self):
+            return self._talker
         
-    class GLLModel:
+        @loggable
+        def type(self):
+            return self._type
         
-        FORMAT = b"GLL"
-        
-        def __init__(self, sentence: bytes) -> None:
-            pass
-        
-    class GSAModel:
-        
-        FORMAT = b"GSA"
-        
-        def __init__(self, sentence: bytes) -> None:
-            pass
-        
-    class GSVModel:
-        
-        FORMAT = b"GSV"
-        
-        def __init__(self, sentence: bytes) -> None:
-            pass
-        
-    class RMCModel:
-        
-        FORMAT = b"RMC"
-        
-        def __init__(self, sentence: bytes) -> None:
-            pass
-        
-    class VTGModel:
-        
-        FORMAT = b"VTG"
-        
-        def __init__(self, sentence: bytes) -> None:
-            pass
-        
-    class ZDAModel:
-        
-        FORMAT = b"ZDA"
-        
-        def __init__(self, sentence: bytes) -> None:
-            pass
-        
-    MODELS = (GGAModel, GLLModel, GSAModel, GSVModel, RMCModel, VTGModel, ZDAModel)
-        
-    @classmethod
-    def build(cls, format_name: bytes):
-        model_obj = None
-        for model in cls.MODELS:
-            if format_name == model.FORMAT:
-                target = model()
-
-
-class GPSParser:
-
-    class Sentense(Enum):
-        HEAD = b"$"
-        SEPARATOR = b","
-        SEPARATOR_LAST = b"*"
-        TERMINOR = b"\r\n"
+        @loggable
+        def checksum(self):
+            return self._checksum
         
         @classmethod
-        def is_valid(cls, sentence: bytes) -> bool:
-            if sentence.startswith(cls.HEAD.value):
-                return True
-            else:
-                return False
-
-    class Type(Enum):
-        GPRMC = "GPRMC"
-        GPGGA = "GPRMC"
-        GPGSA = "GPRMC"
-        GPGSV = "GPRMC"
-        GPVTG = "GPRMC"
-        AVAILABLES = (GPRMC, GPGGA, GPGSA, GPGSV, GPVTG)
-        LENGTH = 5
-        
-        SIZE_GPRMC = 13
-        SIZE_GPGGA = 15
-        SIZE_GPGSA = 18
-        SIZE_GPGSV = 20
-        SIZE_GPVTG = 10
+        def calc_time_utc(cls, raw: str) -> Tuple[Union[int, float]]:
+            hour, min, sec = raw[:2], raw[2:4], raw[4:]
+            return (int(hour), int(min), float(sec))
         
         @classmethod
-        def is_valid(cls, type: str) -> bool:
-            if type in cls.AVAILABLES.value:
-                return True
-            else:
-                return False
-            
-    class Direction(Enum):
-        NORTH = "N"
-        SOUTH = "S"
-        EAST = "E"
-        WEST = "W"
-        AVAILABLES = (NORTH, SOUTH, EAST, WEST)
+        def calc_date_utc(cls, raw: str) -> Tuple[Union[int]]:
+            day, month, year = raw[:2], raw[:4], raw[4:]
+            return (int(day), int(month), int(year))
         
         @classmethod
-        def is_valid(cls, direction: str) -> bool:
-            if direction in cls.AVAILABLES.value:
-                return True
-            else:
-                return False
-            
-        @classmethod
-        def is_positive(cls, direction: str) -> bool:
-            if direction in (cls.NORTH.value, cls.EAST.value):
-                return True
-            else:
-                return False
-            
-        @classmethod
-        def is_negative(cls, direction: str) -> bool:
-            if direction in (cls.SOUTH.value, cls.WEST.value):
-                return True
-            else:
-                return False
-    
-    @classmethod
-    def parse(cls, raw: bytes) -> Dict[str, Logable]:
-        resolved = cls._resolve(raw)
-        if not len(resolved):
-            return {}
-        
-        type = resolved[0]
-        if type == cls.Type.GPRMC.value:
-            return cls._parse_GPRMC(resolved[1:])
-        elif type == cls.Type.GPGGA.value:
-            return cls._parse_GPGGA(resolved[1:])
-        elif type == cls.Type.GPGSA.value:
-            return cls._parse_GPGSA(resolved[1:])
-        elif type == cls.Type.GPGSV.value:
-            return cls._parse_GPGSV(resolved[1:])
-        elif type == cls.Type.GPVTG.value:
-            return cls._parse_GPVTG(resolved[1:])
-        else:
-            return {}
-        
-    @classmethod
-    def convert2radian(cls, degree: float) -> float:
-        return radians(degree)
-    
-    @classmethod
-    def convert2coordinate(cls, degree: float, direction: str, radian: bool = True) -> float:
-        if cls.Direction.is_valid(direction):
-            if cls.Direction.is_negative(direction):
+        def calc_latitude(cls, value: str, ns: str) -> float:
+            d, m = float(value[:-8]), float(value[-8:])
+            degree = d + m / 60
+            if ns == "S":
                 degree = - degree
-        else:
-            raise ValueError(
-                "'direction' must be 'N', 'S', 'E' or 'W'."
-            )
-            
-        if radian:
-            return radians(degree)
-        else:
             return degree
-
-    @classmethod
-    def _resolve(cls, raw: bytes) -> Tuple[str]:
-        if not cls.Sentense.is_valid(raw):
-            return ()
-        try:
-            raw = raw[1:].decode()
-            result = raw.split(cls.Sentense.SEPARATOR.value)
-            last = result.pop()
-            result.extend(last.split(cls.Sentense.SEPARATOR_LAST.value))
-            return tuple(result)
-        except:
-            return ()
-    
-    @classmethod
-    def _parse_GPRMC(cls, contents: Tuple[str]) -> Dict[str, Optional[Logable]]:
-        result = {}
-        if len(contents) != cls.Type.SIZE_GPRMC.value:
-            return result
-
-        latitude = cls._parse_latitude(contents[2])
-        longitude = cls._parse_longitude(contents[4])
-
-        result[GPS_TIME_UTC] = cls._parse_time_utc(contents[0])
-        result[GPS_STATUS] = contents[1]
-
-        result[GPS_LATITUDE] = latitude[0] + latitude[1] / 60
-        result[GPS_LATITUDE_NS] = cls._parse_NS(contents[3])
-        result[GPS_LONGITUDE] = longitude[0] + longitude[1] / 60
-        result[GPS_LONGITUDE_EW] = cls._parse_EW(contents[5])
-
-        result[GPS_BODY_VELOCITY_KNOT] = cls._parse_velocity(contents[6])
-        result[GPS_BODY_TRUE_ANGLE_VELOCITY] = cls._parse_true_angle_velocity(contents[7])
-        result[GPS_DATE_UTC] = cls._parse_date_utc(contents[8])
-        result[GPS_DIFF_ANGLE_TWONORTH] = cls._parse_angle_twonorth(contents[9])
-        result[GPS_ANGLE_TWONORTH_EW] = cls._parse_EW(contents[10])
-        result[GPS_MODE] = contents[11]
-        result[GPS_CHECK_SUM] = cls._parse_check_sum(contents[12])
-
-        return result
-
-    @classmethod
-    def _parse_GPGGA(cls, contents: Tuple[str]) -> Dict[str, Optional[Logable]]:
-        result = {}
-        if len(contents) != cls.Type.SIZE_GPGGA.value:
-            return result
-
-        latitude = cls._parse_latitude(contents[1])
-        longitude = cls._parse_longitude(contents[3])
-
-        result[GPS_TIME_UTC] = cls._parse_time_utc(contents[0])
-
-        result[GPS_LATITUDE] = latitude[0] + latitude[1] / 60
-        result[GPS_LATITUDE_NS] = cls._parse_NS(contents[2])
-        result[GPS_LONGITUDE] = longitude[0] + longitude[1] / 60
-        result[GPS_LONGITUDE_EW] = cls._parse_EW(contents[4])
-
-        result[GPS_QUALITY_POSITION] = cls._parse_quality_position(contents[5])
-        result[GPS_HOWMANY_SATELLITES_USED] = cls._parse_int(contents[6])
-        result[GPS_RATE_DECLINE_QUALITY_HORIZONTAL] = cls._parse_rate_decline(contents[7])
-        result[GPS_ALTITUDE_SEALEVEL] = cls._parse_altitude(contents[8])
-        result[GPS_ALTITUDE_SEALEVEL_UNIT] = contents[9]
-        result[GPS_ALTITUDE_GEOID] = cls._parse_altitude(contents[10])
-        result[GPS_ALTITUDE_GEOID_UNIT] = contents[11]
-        result[GPS_TIME_FROM_LATEST_DGPS] = contents[12]
-        result[GPS_ID_DIFF_POINT] = contents[13]
-        result[GPS_CHECK_SUM] = cls._parse_check_sum(contents[14])
-
-        return result
-
-    @classmethod
-    def _parse_GPGSA(cls, contents: Tuple[str]) -> Dict[str, Optional[Logable]]:
-        result = {}
-        if len(contents) != cls.Type.GPGSA.value:
-            return result
-
-        result[GPS_MODE] = contents[0]
-        result[GPS_TYPE_DETECT] = cls._parse_type_detect(contents[1])
-        result[GPS_NUMBERS_SATELLITE] = cls._parse_number_satellite(contents[2:14])
-        result[GPS_RATE_DECLINE_QUALITY_POSITION] = cls._parse_rate_decline(contents[14])
-        result[GPS_RATE_DECLINE_QUALITY_HORIZONTAL] = cls._parse_rate_decline(contents[15])
-        result[GPS_RATE_DECLINE_QUALITY_VERTICAL] = cls._parse_rate_decline(contents[16])
-        result[GPS_CHECK_SUM] = cls._parse_check_sum(contents[17])
-
-        return result
-
-    @classmethod
-    def _parse_GPGSV(cls, contents: Tuple[str]) -> Dict[str, Optional[Logable]]:
-        result = {}
-        if len(contents) != cls.Type.SIZE_GPGSV.value:
-            return result
-
-        result[GPS_HOWMANY_SENTENCES_GSV] = cls._parse_num_sentence_gsv(contents[0])
-        result[GPS_NUMBER_SENTENCE_GSV] = cls._parse_num_sentence(contents[1])
-        result[GPS_HOWMANY_SATELLITES_IN_VIEW] = cls._parse_num_satellites_in_view(contents[2])
-        result[GPS_SATELLITE_INFO] = cls._parse_info(contents[3:19])
-        result[GPS_CHECK_SUM]= cls._parse_check_sum(contents[19])
-        return result
-
-    @classmethod
-    def _parse_GPVTG(cls, contents: Tuple[str]) -> Dict[str, Optional[Logable]]:
-        result = {}
-        if len(contents) != cls.Type.SIZE_GPVTG.value:
-            return result
-
-        result[GPS_BODY_TRUE_ANGLE_VELOCITY] = cls._parse_true_angle_velocity(contents[0])
-        result[GPS_BODY_MAGNETIC_ANGLE_VELOCITY] = cls._parse_magnetic_angle_velocity(contents[2])
-        result[GPS_BODY_VELOCITY_KNOT] = cls._parse_velocity(contents[4])
-        result[GPS_BODY_VELOCITY_KM] = cls._parse_velocity(contents[6])
-        result[GPS_MODE] = contents[8]
-        result[GPS_CHECK_SUM] = cls._parse_check_sum(contents[9])
-        return result
-
-    @classmethod
-    def _parse_float(cls, content: str) -> Optional[float]:
-        try:
-            return float(content)
-        except:
-            return None
-
-    @classmethod
-    def _parse_int(cls, content: str) -> Optional[int]:
-        try:
-            return int(content)
-        except:
-            return None
-
-    @classmethod
-    def _parse_time_utc(cls, content: str) -> Optional[str]:
-        if len(content) != 10:
-            return None
-        return ":".join((content[:2], content[2:4], content[4:]))
-    
-    @classmethod
-    def convert_time(cls, time: str) -> Tuple[Union[int, float]]:
-        time_list = time.split(":")
-        return (int(time_list[0]), int(time_list[1]), float(time_list[2]))
-
-    @classmethod
-    def _parse_date_utc(cls, content: str) -> Optional[str]:
-        if len(content) != 6:
-            return None
-        return ".".join((content[:2], content[2:4], content[4:]))
-    
-    @classmethod
-    def convert_date(cls, date: str) -> Tuple[int]:
-        return tuple(map(int, date.split(".")))
-
-    @classmethod
-    def _parse_latitude(cls, content: str) -> Optional[Tuple[float]]:
-        if len(content) != 9:
-            return None
-        try:
-            return (float(content[:-7]), float(content[-7:]))
-        except:
-            return None
-
-    @classmethod
-    def _parse_longitude(cls, content: str) -> Optional[Tuple[Union[int, float]]]:
-        return cls._parse_latitude(content)
-
-    @classmethod
-    def _parse_velocity(cls, content: str) -> Optional[float]:
-        return cls._parse_float(content)
-
-    @classmethod
-    def _parse_true_angle_velocity(cls, content: str) -> Optional[float]:
-        return cls._parse_float(content)
-
-    @classmethod
-    def _parse_magnetic_angle_velocity(cls, content: str) -> Optional[float]:
-        return cls._parse_float(content)
-
-    @classmethod
-    def _parse_angle_twonorth(cls, content: str) -> Optional[float]:
-        return cls._parse_float(content)
-
-    @classmethod
-    def _parse_quality_position(cls, content: str) -> Optional[int]:
-        return cls._parse_int(content)
-    
-    @classmethod
-    def _parse_rate_decline(cls, content: str) -> Optional[float]:
-        return cls._parse_float(content)
-
-    @classmethod
-    def _parse_altitude(cls, content: str) -> Optional[float]:
-        return cls._parse_float(content)
-
-    @classmethod
-    def _parse_check_sum(cls, content: str) -> Optional[str]:
-        return content if len(content) == 2 else None
-
-    @classmethod
-    def _parse_type_detect(cls, content: str) -> Optional[int]:
-        return cls._parse_int(content)
-
-    @classmethod
-    def _parse_number_satellite(cls, content: Tuple[str]) -> Optional[str]:
-        try:
-            result = []
-            for num in content:
-                if not len(num):
-                    continue
-                else:
-                    result.append(int(num))
-            return ":".join(result)
-        except:
-            return None
-
-    @classmethod
-    def _parse_num_sentence_gsv(cls, content: str) -> Optional[int]:
-        return cls._parse_int(content)
-
-    @classmethod
-    def _parse_num_sentence(cls, content: str) -> Optional[int]:
-        return cls._parse_int(content)
-
-    @classmethod
-    def _parse_num_satellites_in_view(cls, content: str) -> Optional[int]:
-        return cls._parse_int(content)
-
-    @classmethod
-    def _parse_angle_satellite(cls, content: str) -> Optional[int]:
-        return cls._parse_int(content)
-
-    @classmethod
-    def _parse_ratio_carrier_noise(cls, content: str) -> Optional[int]:
-        return cls._parse_int(content)
-
-    @classmethod
-    def _parse_NS(cls, content: str) -> Optional[str]:
-        return content if content in (cls.Direction.NORTH.value, cls.Direction.SOUTH.value) else None
-
-    @classmethod
-    def _parse_EW(cls, content: str) -> Optional[str]:
-        return content if content in (cls.Direction.EAST.value, cls.Direction.WEST.value) else None
-    
-    @classmethod
-    def _parse_info(cls, content: str) -> Optional[str]:
-        if len(content) != 16:
-            return None
         
-        info = []
-        for i in range(4):
-            satellite = []
-            satellite.append(content[4 * i])
-            satellite.append(content[1 + 4 * i])
-            satellite.append(content[2 + 4 * i])
-            satellite.append(content[3 + 4 * i])
-            info.append(":".join(satellite))
-        return "/".join(info)
+        @classmethod
+        def calc_longitude(cls, value: str, ew: str) -> float:
+            d, m = float(value[:-8]), float(value[-8:])
+            degree = d + m / 60
+            if ew == "W":
+                degree = - degree
+            return degree
+        
+        @classmethod
+        def format_time_utc(cls, pub_name: str, time_utc: Optional[Tuple[Union[int, float]]]) -> Dict[str, str]:
+            name = f"{pub_name}-time_utc"
+            value = None
+            if time_utc is not None:
+                value = f"{time_utc[0]}:{time_utc[1]}:{time_utc[2]}"
+            return {name: value}
+        
+        @classmethod
+        def format_date_utc(cls, pub_name: str, date_utc: Optional[Tuple[int]]) -> Dict[str, str]:
+            name = f"{pub_name}-date_utc"
+            value = None
+            if date_utc is not None:
+                value = f"{date_utc[2]}.{date_utc[1]}.{date_utc[0]}"
+            return {name: value}
+
+        
+class GGAModel(NMEAModelBase):
+        
+    FORMAT = "GGA"
+    NUM_FIELDS = 16
     
-    @classmethod
-    def convert_info(cls, info: str) -> Tuple[Dict[str, int]]:
+    def setup(self, fields: Tuple[str]):
+        super().setup(fields)
+        
+        time_utc = empty_None(fields[1])
+        latitude = empty_None(fields[2])
+        latitude_ns = empty_None(fields[3])
+        longitude = empty_None(fields[4])
+        longitude_ew = empty_None(fields[5])
+        
+        self._time_utc: Optional[Tuple[Union[int, float]]] = None
+        self._latitude: Optional[float] = None
+        self._longitude: Optional[float] = None
+        self._quality: Optional[int] = empty_None(fields[6], int)
+        self._satellites_used: Optional[int] = empty_None(fields[7], int)
+        self._HDOP: Optional[float] = empty_None(fields[8], float)
+        self._altitude: Optional[float] = empty_None(fields[9], float)
+        self._geoidal_separation: Optional[float] = empty_None(fields[11], float)
+        self._station_id: Optional[float] = empty_None(fields[14], int)
+        
+        if time_utc is not None:
+            self._time_utc = self.calc_time_utc(time_utc)
+        if latitude is not None and latitude_ns is not None:
+            self._latitude = self.calc_latitude(latitude, latitude_ns)
+        if longitude is not None and longitude_ew is not None:
+            self._longitude = self.calc_longitude(longitude, longitude_ew)
+        
+    @loggable
+    def time_utc(self):
+        return self._time_utc
+    
+    @time_utc.formatter
+    def time_utc(self):
+        return self.format_time_utc(self.publisher_name, self._time_utc)
+    
+    @loggable
+    def latitude(self):
+        return self._latitude
+    
+    @loggable
+    def longitude(self):
+        return self._longitude
+    
+    @loggable
+    def quality(self):
+        return self._quality
+    
+    @loggable
+    def satellites_used(self):
+        return self._satellites_used
+    
+    @loggable
+    def HDOP(self):
+        return self._HDOP
+    
+    @loggable
+    def altitude(self):
+        return self._altitude
+    
+    @loggable
+    def geoidal_separation(self):
+        return self._geoidal_separation
+    
+    @loggable
+    def station_id(self):
+        return self._station_id
+        
+        
+class GLLModel(NMEAModelBase):
+    
+    FORMAT = "GLL"
+    NUM_FIELDS = 9
+    
+    def setup(self, fields: Tuple[str]):
+        super().setup(fields)
+        
+        latitude = empty_None(fields[1])
+        latitude_ns = empty_None(fields[2])
+        longitude = empty_None(fields[3])
+        longitude_ew = empty_None(fields[4])
+        time_utc = empty_None(fields[5])
+        
+        self._latitude: Optional[float] = None
+        self._longitude: Optional[float] = None
+        self._time_utc: Optional[Tuple[Union[int, float]]] = None
+        self._status = empty_None(fields[6])
+        
+        if latitude is not None and latitude_ns is not None:
+            self._latitude = self.calc_latitude(latitude, latitude_ns)
+        if longitude is not None and longitude_ew is not None:
+            self._longitude = self.calc_longitude(longitude, longitude_ew)
+        if time_utc is not None:
+            self._time_utc = self.calc_time_utc(time_utc)
+        
+    @loggable
+    def latitude(self):
+        return self._latitude
+    
+    @loggable
+    def longitude(self):
+        return self._longitude
+    
+    @loggable
+    def time_utc(self):
+        return self._time_utc
+    
+    @time_utc.formatter
+    def time_utc(self):
+        return self.format_time_utc(self.publisher_name, self._time_utc)
+    
+    @loggable
+    def status(self):
+        return self._status
+        
+    
+class GSAModel(NMEAModelBase):
+    
+    FORMAT = "GSA"
+    NUM_FIELDS = 19
+        
+    def setup(self, fields: Tuple[str]):
+        super().setup(fields)
+        
+        self._mode = empty_None(fields[1])
+        self._fix_type = empty_None(fields[2])
+        
+        self._satellite_id = tuple([empty_None(id, int) for id in fields[3:15]])
+        self._PDOP = empty_None(fields[15], float)
+        self._HDOP = empty_None(fields[16], float)
+        self._VDOP = empty_None(fields[17], float)
+        
+    @loggable
+    def mode(self):
+        return self._mode
+    
+    @mode.formatter
+    def mode(self):
+        return {f"{self.publisher_name}-GSA_mode": self._mode}
+    
+    @loggable
+    def fix_type(self):
+        return self._fix_type
+    
+    @fix_type.formatter
+    def fix_type(self):
+        return {f"{self.publisher_name}-GSA_fix_type": self._fix_type}
+    
+    @loggable
+    def satellite_id(self):
+        return self._satellite_id
+    
+    @satellite_id.formatter
+    def satellite_id(self):
+        names = [f"{self.publisher_name}-satellite_id_{num}" for num in range(1, 13)]                
+        return {name: val for name, val in zip(names, self._satellite_id)}
+    
+    @loggable
+    def PDOP(self):
+        return self._PDOP
+    
+    @loggable
+    def HDOP(self):
+        return self._HDOP
+
+    @loggable
+    def VDOP(self):
+        return self._VDOP
+        
+    
+class GSVModel(NMEAModelBase):
+    
+    FORMAT = "GSV"
+    
+    
+    class SatelliteProperty:
+        
+        def __init__(self, id: str, elev: str, azim: str, SNR: str) -> None:
+            self._id = empty_None(id, int)
+            self._elev = empty_None(elev, int)
+            self._azim = empty_None(azim, int)
+            self._SNR= empty_None(SNR, int)
+            
+        @property
+        def id(self):
+            return self._id
+        
+        @property
+        def elevation(self):
+            return self._elev
+        
+        @property
+        def azimuth(self):
+            return self._azim
+        
+        @property
+        def SNR(self):
+            return self._SNR
+        
+        def format(self, gen: str, name: str):
+            return {f"{gen}-{name}_id": f"{self._id}",
+                    f"{gen}-{name}_elevation": f"{self._elev}",
+                    f"{gen}-{name}_azimuth": f"{self._azim}",
+                    f"{gen}-{name}_SNR": f"{self._SNR}"}
+    
+    
+    def setup(self, fields: Tuple[str]):
+        super().setup(fields)
+        
+        self._num_message = empty_None(fields[1], int)
+        self._seq_num = empty_None(fields[2], int)
+        self._satellites_in_view = empty_None(fields[3], int)
+        self._satellite_1 = None
+        self._satellite_2 = None
+        self._satellite_3 = None
+        self._satellite_4 = None
+        
+        # NOTE a length of the GSV format is changable. 
+        if len(fields) > 8:
+            self._satellite_1 = self.SatelliteProperty(fields[4], fields[5], fields[6], fields[7])
+        if len(fields) > 12:
+            self._satellite_2 = self.SatelliteProperty(fields[8], fields[9], fields[10], fields[11])
+        if len(fields) > 16:
+            self._satellite_3 = self.SatelliteProperty(fields[12], fields[13], fields[14], fields[15])
+        if len(fields) > 20:
+            self._satellite_4 = self.SatelliteProperty(fields[16], fields[17], fields[18], fields[19])
+        
+    @loggable
+    def num_message(self):
+        return self._num_message
+    
+    @loggable
+    def seq_num(self):
+        return self._seq_num
+    
+    @loggable
+    def satellites_in_view(self):
+        return self._satellites_in_view
+    
+    @loggable
+    def satellite_1(self):
+        return self._satellite_1
+    
+    @satellite_1.formatter
+    def satellite_1(self):
+        return self._satellite_1.format(self.publisher_name, "satellite1")
+    
+    @loggable
+    def satellite_2(self):
+        return self._satellite_2
+    
+    @satellite_2.formatter
+    def satellite_2(self):
+        return self._satellite_2.format(self.publisher_name, "satellite2")
+    
+    @loggable
+    def satellite_3(self):
+        return self._satellite_3
+    
+    @satellite_3.formatter
+    def satellite_3(self):
+        return self._satellite_3.format(self.publisher_name, "satellite3")
+    
+    @loggable
+    def satellite_4(self):
+        return self._satellite_4
+    
+    @satellite_4.formatter
+    def satellite_4(self):
+        return self._satellite_4.format(self.publisher_name, "satellite4")
+    
+    
+class RMCModel(NMEAModelBase):
+    
+    FORMAT = "RMC"
+    NUM_FIELDS = 14
+    
+    def setup(self, fields: Tuple[str]):
+        super().setup(fields)
+        
+        time_utc = empty_None(fields[1])
+        latitude = empty_None(fields[3])
+        latitude_ns = empty_None(fields[4])
+        longitude = empty_None(fields[5])
+        longitude_ew = empty_None(fields[6])
+        date_utc = empty_None(fields[9])
+        
+        self._time_utc = None
+        self._status = empty_None(fields[2])
+        self._latitude = None
+        self._longitude = None
+        self._speed_knots = empty_None(fields[7], float)
+        self._true_course = empty_None(fields[8], float)
+        self._date_utc = None
+        self._mode = empty_None(fields[12])
+        
+        if time_utc is not None:
+            self._time_utc = self.calc_time_utc(time_utc)
+        if latitude is not None and latitude_ns is not None:
+            self._latitude = self.calc_latitude(latitude, latitude_ns)
+        if longitude is not None and longitude_ew is not None:
+            self._longitude = self.calc_longitude(longitude, longitude_ew)
+        if date_utc is not None:
+            self._date_utc = self.calc_date_utc(date_utc)
+    
+    @loggable
+    def time_utc(self):
+        return self._time_utc
+    
+    @time_utc.formatter
+    def time_utc(self):
+        return self.format_time_utc(self.publisher_name, self._time_utc)
+    
+    @loggable
+    def status(self):
+        return self._status
+    
+    @loggable
+    def latitude(self):
+        return self._latitude
+    
+    @loggable
+    def longitude(self):
+        return self._longitude
+    
+    @loggable
+    def speed_knots(self):
+        return self._speed_knots
+    
+    @loggable
+    def true_course(self):
+        return self._true_course
+    
+    @loggable
+    def date_utc(self):
+        return self._date_utc
+    
+    @date_utc.formatter
+    def date_utc(self):
+        return self.format_date_utc(self.publisher_name, self._date_utc)
+    
+    @loggable
+    def mode(self):
+        return self._mode
+    
+    
+class VTGModel(NMEAModelBase):
+    
+    FORMAT = "VTG"
+    NUM_FIELDS = 11
+    
+    def setup(self, fields: Tuple[str]):
+        super().setup(fields)
+        
+        self._true_course = empty_None(fields[1], float)
+        self._mag_course = empty_None(fields[3], float)
+        self._speed_knots = empty_None(fields[5], float)
+        self._speed_km = empty_None(fields[7], float)
+        self._mode = empty_None(fields[9])
+        
+    @loggable
+    def true_course(self):
+        return self._true_course
+    
+    @loggable
+    def mag_course(self):
+        return self._mag_course
+    
+    @loggable
+    def speed_km(self):
+        return self._speed_km
+    
+    @loggable
+    def speed_knots(self):
+        return self._speed_knots
+    
+    @loggable
+    def mode(self):
+        return self._mode
+    
+    
+class ZDAModel(NMEAModelBase):
+    
+    FORMAT = "ZDA"
+    NUM_FIELDS = 8
+    
+    def setup(self, fields: Tuple[str]):
+        super().setup(fields)
+        
+        time_utc = empty_None(fields[1])
+        day = empty_None(fields[2], int)
+        month = empty_None(fields[3])
+        year = empty_None(fields[4][2:])
+
+        self._time_utc = None        
+        self._date_utc = None
+        self._local_zone_hour = empty_None(fields[5], int)
+        self._local_zone_min = empty_None(fields[6], int)
+        
+        if time_utc is not None:
+            self._time_utc = self.calc_time_utc(time_utc)
+        if day is not None and month is not None and year is not None:
+            self._date_utc = (day, month, year)
+        
+    @loggable
+    def time_utc(self):
+        return self._time_utc
+    
+    @time_utc.formatter
+    def time_utc(self):
+        return self.format_time_utc(self.publisher_name, self._time_utc)
+    
+    @loggable
+    def date_utc(self):
+        return self._date_utc
+    
+    @date_utc.formatter
+    def date_utc(self):
+        return self.format_date_utc(self.publisher_name, self._date_utc)
+    
+    @loggable
+    def local_zone_hour(self):
+        return self._local_zone_hour
+    
+    @loggable
+    def local_zone_min(self):
+        return self._local_zone_min
+    
+    
+TYPE_MODELS = Union[GGAModel, GLLModel, GSAModel, GSVModel, RMCModel, VTGModel, ZDAModel, None]
+TYPE_MODELCLASS = Union[Type[GGAModel], Type[GLLModel], Type[GSAModel], Type[GSVModel],
+                        Type[RMCModel], Type[VTGModel], Type[ZDAModel]]
+
+
+class NMEAParser:
+    
+    HEAD = "$"
+    TAIL = "\r\n"
+    DELIMITER_FILED = ","
+    DELIMITER_CHECKSUM = "*"
+    DELIMITER_PATTERN = "[,*]"
+        
+    MODELS: Dict[bytes, TYPE_MODELCLASS] = {GGAModel.FORMAT: GGAModel, GLLModel.FORMAT: GLLModel, 
+                                            GSAModel.FORMAT: GSAModel, GSVModel.FORMAT: GSVModel, 
+                                            RMCModel.FORMAT: RMCModel, VTGModel.FORMAT: VTGModel,
+                                            ZDAModel.FORMAT: ZDAModel}
+    
+    def __init__(self, comp_name: str) -> None:
+        self._comp_name = comp_name
+        
+    def parse(self, sentence: bytes) -> TYPE_MODELS:
+        
         try:
-            result = []
-            for satellite in info.split("/"):
-                content = satellite.split(":")
-                data = {}
-                data[GPS_NUMBER_SATELLITE] = cls._parse_int(content[0])
-                data[GPS_ANGLE_ELEVATION_SATTELITE] = cls._parse_int(content[1])
-                data[GPS_ANGLE_AZIMUTH_SATTELITE] = cls._parse_int(content[2])
-                data[GPS_RATIO_CARRIER_NOISE] = cls._parse_int(content[3])
-                result.append(data)
-            return tuple(result)
-        except:
-            return ()
+            sentence = sentence.decode()
+        except UnicodeDecodeError:
+            print("UnicodeDecodeError")
+            return None
+            
+        if len(sentence) < 5:
+            print("too short")
+            return None
+        if sentence[0] != self.HEAD or sentence[-2:] != self.TAIL:
+            print("invalid head or tail")
+            return None
+                
+        fields = re.split(self.DELIMITER_PATTERN, sentence[1:-2])
+        modeltype = self.MODELS.get(fields[0][2:])
+        if modeltype is None:
+            return None
+        # a length of the GSV format is changable, but the others not.
+        if modeltype != GSVModel and len(fields) != modeltype.NUM_FIELDS:
+            return None
+                 
+        model = modeltype(self._comp_name)
+        model.setup(fields)
+        return model
