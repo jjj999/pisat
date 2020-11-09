@@ -1,24 +1,22 @@
 
 import inspect
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
-from pisat.config.datamodel import loggable, DataModelBase
-
-    
-class LinkNotSetError(Exception):
-    """Raised if a link doesn't be set and a loggable is retrieved."""
-    pass
+from pisat.base.component import Component
+from pisat.model.datamodel import loggable, DataModelBase
     
 
 class linked_loggable(loggable):
     
     def __init__(self,
                  loggable: loggable,
-                 comp_name: str) -> None:
+                 publisher: Component,
+                 default: Any = None) -> None:
         super().__init__(loggable._fget)
         self._loggable = loggable
         self._model = None
-        self._comp_name = comp_name
+        self._publisher = publisher
+        self._default = default
     
     def __get__(self, obj: Any, type: Optional[type] = None):
         if obj is None:
@@ -27,17 +25,15 @@ class linked_loggable(loggable):
             if self._model is not None:
                 return self._fget(self._model)
             else:
-                raise LinkNotSetError(
-                    "An object which links to the loggable is not set."
-                )
+                return self._default
                 
     @property
-    def generate_component(self):
-        return self._comp_name
+    def publisher(self):
+        return self._publisher
     
-    def extract(self, obj: Any) -> str:
+    def extract(self, obj: Any, name: str, gen: str) -> Dict[str, str]:
         if self._fmat is None:
-            return self._loggable._fmat(self._model)
+            return self._loggable.extract(obj, name, gen)
         else:
             return self._fmat(obj)
         
@@ -47,27 +43,18 @@ class linked_loggable(loggable):
         
 class LinkedDataModelBase(DataModelBase):
     
-    @classmethod
-    def get_linked_loggables(cls):
-        return inspect.getmembers(cls, lambda x: isinstance(x, linked_loggable))
-        
-    @classmethod
-    def _get_Name2Link(cls) -> Dict[str, List[linked_loggable]]:
-        result = {}
-        for _, val in cls.get_loggables():
-            d = result.get(val.generate_component)
-            if d is None:
-                result[val.generate_component] = [val]
-            else:
-                result[val.generate_component].append(val)
-                
-        return result
+    def __init_subclass__(cls) -> None:
+        cls._linked_loggables = inspect.getmembers(cls, lambda x: isinstance(x, linked_loggable))
+        cls._Pub2Link: Dict[Component, List[linked_loggable]] = {}
+        for _, linked in cls.linked_loggables:
+            if cls._Pub2Link.get(linked.publisher) is None:
+                cls._Pub2Link[linked.publisher] = []
+            cls._Pub2Link[linked.publisher].append(linked)
     
     def sync(self, *models: DataModelBase):
-        Name2Link = self._get_Name2Link()
-        
+        # NOTE If needless models are given, it works.
         for model in models:
-            links = Name2Link.get(model.generate_component)
+            links = self._Pub2Link.get(model.publisher)
             if links is not None:
                 for link in links:
                     link.sync(model)

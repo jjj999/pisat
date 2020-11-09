@@ -1,55 +1,103 @@
 
 import inspect
-from typing import Any, Callable, Dict, Optional, Tuple, Type
+from typing import Any, Callable, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union
+
+from pisat.base.component import Component
+from pisat.util.deco import class_property
 
 
-class loggable:
+Loggable = Union[str, bytes, int, float, None]
+Model = TypeVar("Model")
+GetReturn = TypeVar("GetReturn")
+Publisher = TypeVar("Publisher", Component)
+
+
+class loggable(Generic[Model, GetReturn]):
     
     def __init__(self, 
-                 fget: Optional[Callable[[Any], Any]] = None,
-                 fmat: Optional[Callable[[Any], Any]] = None) -> None:
+                 fget: Optional[Callable[[Model], GetReturn]] = None,
+                 fmat: Optional[Callable[[Model], Dict[str, Loggable]]] = None) -> None:
+        self.__doc__ = getattr(fget, "__doc__")
         self._fget = fget
         self._fmat = fmat
         
-    def __get__(self, obj: Any, type: Optional[type] = None):
+    def __get__(self, obj: Model, clazz: Optional[Type[Model]] = None):
         if obj is None:
             return self
         if self._fget is not None:
             return self._fget(obj)
-        raise AttributeError
+        raise AttributeError(
+            "'getter' has not been set yet."
+        )
     
-    def getter(self, fget: Optional[Callable[[Any], Any]]):
+    def getter(self, fget: Optional[Callable[[Model], GetReturn]]):
         self._fget = fget
         return self
     
-    def formatter(self, fmat: Optional[Callable[[Any], Any]]):
+    def formatter(self, fmat: Callable[[Model], Dict[str, Loggable]]):
         self._fmat = fmat
         return self
     
-    def extract(self, obj: Any) -> str:
-        return self._fmat(obj)
+    def extract(self, model: Model) -> Dict[str, Loggable]:
+        # Default formatting
+        if self._fmat is None:
+            name = model.get_tag(self)
+            return {name: self._fget(model)}
+        # User-defined formatting
+        else:
+            return self._fmat(model)
     
 
-class DataModelBase:
+class cached_loggable(loggable):
     
-    def __init__(self, comp_name: str) -> None:
-        self._comp_name = comp_name
+    def __init__(self,
+                 fget: Optional[Callable[[Model], GetReturn]] = None,
+                 fmat: Optional[Callable[[Model], Dict[str, Loggable]]] = None) -> None:
+        super().__init__(fget=fget, fmat=fmat)
+        
+    def __get__(self, obj: Model, clazz: Optional[Type[Model]] = None):
+        if obj is None:
+            return self
+        if self._fget is not None:
+            value = self._fget(obj)
+            obj.__dict__[self._fget.__name__] = value
+            return value
+        raise AttributeError(
+            "'getter' has not been set yet."
+        )
+
+
+class DataModelBase(Generic[Publisher]):
+    
+    def __init_subclass__(cls) -> None:
+        cls._loggables = inspect.getmembers(cls, lambda x: isinstance(x, loggable))
+    
+    def __init__(self, publisher: Publisher) -> None:
+        self._publisher = publisher
         
     def setup(self):
         pass
         
     @property
-    def generate_component(self):
-        return self._comp_name
+    def publisher(self) -> Publisher:
+        return self._publisher
     
-    @classmethod
-    def get_loggables(cls):
-        return inspect.getmembers(cls, lambda x: isinstance(x, loggable))
+    @property
+    def publisher_name(self) -> str:
+        return self._publisher.name
     
-    def extract(self):
+    def get_tag(self, logg: loggable) -> str:
+        name_loggable = logg._fget.__name__
+        return f"{self.publisher}-{name_loggable}"
+    
+    @class_property
+    def loggables(cls) -> List[Tuple[str, loggable]]:
+        return cls._loggables
+    
+    def extract(self) -> Dict[str, Loggable]:
         result = {}
-        for _, val in self.get_loggables():
-            result.update(val.extract(self))
+        for _, logg in self.loggables:
+            result.update(logg.extract(self))
             
         return result
         
