@@ -44,16 +44,8 @@ class Component:
         self._name = name
         
     @property
-    def name(self):
+    def name(self) -> str:
         if self._name is None:
             return self.__class__.__name__
         else:
             return self._name
-            
-    @name.setter
-    def name(self, name: str):
-        if not isinstance(name, str):
-            raise TypeError(
-                "'name' must be str."
-            )
-        self._name = name
