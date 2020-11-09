@@ -26,6 +26,7 @@ pisat.core.nav.Node
 from typing import Dict, Any, Type, Union, Optional, List
 
 from pisat.core.nav.node import Node
+from pisat.model.linked_datamodel import LinkedDataModelBase
 
 
 class ConditionMismatchError(Exception):
@@ -212,6 +213,12 @@ class Context:
                 raise TypeError(
                     "Values of 'dest' must be subclasses of Node class or None."
                 )
+                
+        # check if a data model is given
+        if not issubclass(node.model, LinkedDataModelBase) or node.model is not None:
+            raise TypeError(
+                f"'model' of Node must be a subclass of {LinkedDataModelBase.__name__} or None."
+            )
 
         if start:
             # check if the start node is duplicated

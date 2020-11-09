@@ -20,14 +20,17 @@ pisat.core.nav.Context
 pisat.core.cansat.CanSat
 """
 
-from typing import Dict, Any, Set
+from typing import Dict, Any, Generic, Optional, Type, TypeVar
 
-from pisat.config.type import Logable
 from pisat.core.manager.component_manager import ComponentManager
 from pisat.core.nav.post_event import PostEvent
+from pisat.model.linked_datamodel import LinkedDataModelBase
 
 
-class Node:
+LinkedModel = TypeVar("LinkedModel", LinkedDataModelBase)
+
+
+class Node(Generic[LinkedModel]):
     """A state class in a mission.
     
     This class represents a state in a mission and 
@@ -73,7 +76,7 @@ class Node:
     """
     
     is_feed: bool = True
-    DNAMES_JUDGED: Set[str] = set()
+    model: Type[LinkedModel] = None    
 
     def __init__(self, 
                  manager: ComponentManager,
@@ -116,7 +119,7 @@ class Node:
         """
         pass
 
-    def judge(self, data: Dict[str, Logable]) -> Any:
+    def judge(self, data: LinkedModel) -> Any:
         """Judge whether this Node has to move another Node.
         
         This method recieves the result of data logging of one time and try to 
@@ -170,12 +173,6 @@ class Node:
         """
         pass
     
-    def catched(self):
-        pass
-    
-    def verify(self) -> bool:
-        return True
-        
     def exit(self) -> None:
         """Clean up this Node.
         

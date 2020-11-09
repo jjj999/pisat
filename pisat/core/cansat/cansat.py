@@ -25,7 +25,6 @@ pisat.core.manager.ComponentManager
 from threading import Thread
 from typing import Any, Dict, Optional, Type
 
-from pisat.config.type import Logable
 from pisat.core.manager.component_manager import ComponentManager
 from pisat.core.logger.datalogger import DataLogger
 from pisat.core.logger.systemlogger import SystemLogger
@@ -123,6 +122,7 @@ class CanSat:
         
         self._event: PostEvent = PostEvent()
         self._node: Node = self._current(self._manager, self._event)
+        self._dlogger.set_model(self._node.model)
                 
     def log(self, node: Type[Node], msg: str):
         """Logging system log related with given Node.
@@ -179,15 +179,11 @@ class CanSat:
             Any
                 Result of giving Node.judge logged data.
         """
-        if self._node.is_feed and self._dlogger is not None:
+        if self._node.is_feed and self._dlogger is not None and self._node.model is not None:
             data = self._dlogger.read()
-            data_for_judge = {}
-            for dname in self._node.DNAMES_JUDGED:
-                data_for_judge[dname] = data.get(dname)
-                
-            return self._node.judge(data_for_judge)
+            return self._node.judge(data)
         else:
-            return self._node.judge({})
+            return self._node.judge(None)
             
     def exit(self):
         """Execute 'exit' method of the current Node.
@@ -260,6 +256,7 @@ class CanSat:
                     self._current = self._context.current
                     self._destination = self._context.destination
                     self._node = node_next(self._manager, self._event)
+                    self._dlogger.set_model(self._node.model)
         except KeyboardInterrupt:
             pass
         finally:
