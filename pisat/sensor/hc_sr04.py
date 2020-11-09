@@ -1,19 +1,27 @@
 
 import time
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
-from pisat.config.type import Logable
 from pisat.handler.digital_input_handler_base import DigitalInputHandlerBase
 from pisat.handler.digital_output_handler_base import DigitalOutputHandlerBase
+from pisat.model.datamodel import DataModelBase, loggable
 from pisat.sensor.sensor_base import SensorBase
 
 
 class HcSr04(SensorBase):
     
-    # TODO
-    DATA_NAMES = ()
-    DEFAULT_VALUES = {}
     
+    class DataModel(DataModelBase):
+        
+        def setup(self, dist):
+            self._dist = dist
+            
+        @loggable
+        def dist(self):
+            return self._dist
+    
+    
+    # sec
     TIME_OUTPUT_PULSE = 1e-6
     
     # m/s at 15 celsius deg
@@ -36,20 +44,19 @@ class HcSr04(SensorBase):
         self._handler_input = input
         self._handler_output = output
         
-    # TODO
-    def read(self, *dnames: Tuple[str, ...]) -> Dict[str, Logable]:
-        pass
-    
-    # TODO
-    def readf(self, *dnames: Tuple[str, ...]) -> List[Logable]:
-        pass
+    def read(self):
+        dist = self._read_distance()
         
-    def _read_distance(self):
+        model = self.DataModel(self.name)
+        model.setup(dist)
+        return model
+        
+    def _read_distance(self) -> float:
         self._output_pulse()
         time_echo = self._observe_time_echo()
         return time_echo * self.VELOCITY_SOUND_AIR / 2
     
-    def _output_pulse(self):
+    def _output_pulse(self) -> None:
         self._handler_output.set_high()
         time.sleep(self.TIME_OUTPUT_PULSE)
         self._handler_output.set_low()

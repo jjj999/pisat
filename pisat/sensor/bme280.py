@@ -7,10 +7,6 @@ pisat.sensor.sensor.bme280
 Sensor class of BME280 compatible with the pisat system.
 This module works completely, regardless of whether using the pisat system or not.
 
-
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
-
 [info]
 BME280 datasheet
     https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bme280-ds002.pdf
@@ -18,12 +14,11 @@ BME280 datasheet
 TODO    docstring
 """
 
-from os import name
-from typing import *
+from typing import Optional, Tuple, Union
 
-from pisat.config.dname import PRESSURE, TEMPERATURE, HUMMIDITY
 from pisat.handler.i2c_handler_base import I2CHandlerBase
 from pisat.handler.spi_handler_base import SPIHandlerBase
+from pisat.model.datamodel import loggable, DataModelBase
 from pisat.sensor.sensor_base import HandlerMismatchError
 from pisat.sensor.sensor_base import SensorBase
 
@@ -34,15 +29,7 @@ class Bme280(SensorBase):
 
     An object of the class comletely works, regardless of wheter using the pisat system or not.
     This class is implemented as a subclass of the SensorAdditional class.
-
-    Arguments
-    ---------
-
     """
-
-    #   SensorAdditional ATTRIBUTES
-    DATA_NAMES              = (PRESSURE, TEMPERATURE, HUMMIDITY)
-    DEFAULT_VALUES          = {dname: 100. for dname in DATA_NAMES}
 
     #   I2C ADDRESS
     ADDRESS_I2C_GND         = 0x76
@@ -118,10 +105,29 @@ class Bme280(SensorBase):
     #   Enables 3-wire SPI interface when set to 1 (0b1).
     #   When set to 0 (0b0), enables 4-wire one.
     #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
-
+    
+    class DataModel(DataModelBase):
+        
+        def setup(self, press: float, temp: float, hum: float):
+            self._press = press
+            self._temp = temp
+            self._hum = hum
+        
+        @loggable
+        def press(self):
+            return self._press
+        
+        @loggable
+        def temp(self):
+            return self._temp
+        
+        @loggable
+        def hum(self):
+            return self._hum
+            
+            
     def __init__(self,
-                 handler: Union[I2CHandlerBase, SPIHandlerBase, None] = None,
-                 debug: bool=False,
+                 handler: Union[I2CHandlerBase, SPIHandlerBase],
                  name: Optional[str] = None,
                  osrs_p=0b101,
                  osrs_t=0b101,
@@ -131,9 +137,7 @@ class Bme280(SensorBase):
                  m_filter=0b100,
                  spi3w_en=0b0):
 
-        super().__init__(handler, debug, name=name)
-        if self._debug:
-            return
+        super().__init__(handler, name=name)
 
         self._temp_fine: int = 0
         self._dig_temp: tuple = None
@@ -234,63 +238,15 @@ class Bme280(SensorBase):
     def dig_hum(self):
         return self._dig_hum
 
-    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
-    #   MAIN READ METHOD
-    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
-
-    def readf(self, *dnames) -> List[float]:
-
-        # for debug mode
-        debugging = super().readf(*dnames)
-        if debugging:
-            return debugging
-
+    def read(self):
         raw_press, raw_temp, raw_hum = self._read_raw_data()
-
-        if len(dnames) == 0:
-            return [self.read_press(raw_press), self.read_temp(raw_temp), self.read_hum(raw_hum)]
-
-        else:
-            result = []
-            for dname in dnames:
-                if dname == PRESSURE:
-                    result.append(self.read_press(raw_press))
-                elif dname == TEMPERATURE:
-                    result.append(self.read_temp(raw_temp))
-                elif dname == HUMMIDITY:
-                    result.append(self.read_hum(raw_hum))
-
-            if len(result) == 0:
-                raise ValueError("The given arguments are not supported.")
-
-            return result
-
-    def read(self, *dnames) -> Dict[str, float]:
-
-        # for debug mode
-        debugging = super().read(*dnames)
-        if debugging:
-            return debugging
-
-        raw_press, raw_temp, raw_hum = self._read_raw_data()
-
-        if len(dnames) == 0:
-            return {dname: val for dname, val in zip(self.dnames, self.readf())}
-
-        else:
-            result = {}
-            for dname in dnames:
-                if dname == PRESSURE:
-                    result[PRESSURE] = self.read_press(raw_press)
-                elif dname == TEMPERATURE:
-                    result[TEMPERATURE] = self.read_temp(raw_temp)
-                elif dname == HUMMIDITY:
-                    result[HUMMIDITY] = self.read_hum(raw_hum)
-
-            if len(result) == 0:
-                raise ValueError("The given arguments are not supported.")
-
-            return result
+        press = self.calc_press(raw_press)
+        temp = self.calc_temp(raw_temp)
+        hum = self.calc_hum(raw_hum)
+        
+        model = self.DataModel(self.name)
+        model.setup(press, temp, hum)
+        return model
 
     def set_options(self,
                     osrs_p=None,
@@ -380,7 +336,7 @@ class Bme280(SensorBase):
     #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
 
     # [deg C]
-    def read_temp(self, raw: int) -> float:
+    def calc_temp(self, raw: int) -> float:
         var1 = ((raw / 8 - self._dig_temp[0] * 2) * self._dig_temp[1]) / 2048
         var2 = (raw / 16 - self._dig_temp[0]
                 ) ** 2 * self._dig_temp[2] / 67108864
@@ -389,7 +345,7 @@ class Bme280(SensorBase):
         return ((var1 + var2) * 5 + 128) / 25600
 
     # [hPa]
-    def read_press(self, raw: int) -> float:
+    def calc_press(self, raw: int) -> float:
         var1 = self._temp_fine - 128000
         var2 = var1 ** 2 * self._dig_press[5] \
             + ((var1 * self._dig_press[4]) << 17) \
@@ -408,7 +364,7 @@ class Bme280(SensorBase):
             return ((p + var1 + var2) / 256 + (self._dig_press[6] * 16.0)) / 25600
 
     # [%]
-    def read_hum(self, raw: int) -> float:
+    def calc_hum(self, raw: int) -> float:
         h = self._temp_fine - 76800
         h = (((((raw << 14) - (self._dig_hum[3] << 20) - self._dig_hum[4] * h) + 16384) >> 15)
              * ((((((h * self._dig_hum[5] >> 10) * ((h * self._dig_hum[2] >> 11) + 32768)) >> 10) + 2097152)

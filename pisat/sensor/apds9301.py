@@ -7,10 +7,6 @@ pisat.sensor.sensor.apds9301
 Sensor class of APDS280 compatible with the pisat system.
 This module works completely, regardless of whether using the pisat system or not.
 
-
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
-
 [info]
 APDS9301 datasheet
     https://datasheetspdf.com/datasheet/APDS-9301.html
@@ -19,19 +15,15 @@ TODO    interrupt settings, debug, docstring
 """
 
 import math
-from typing import *
+from typing import Optional, Tuple
 
-from pisat.config.dname import ILLUMINANCE
 from pisat.handler.i2c_handler_base import I2CHandlerBase
+from pisat.model.datamodel import DataModelBase, loggable
 from pisat.sensor.sensor_base import HandlerMismatchError, HandlerNotSetError
 from pisat.sensor.sensor_base import SensorBase
 
 
 class Apds9301(SensorBase):
-
-    #   SensorAdditional ATTRIBUTES
-    DATA_NAMES                  = (ILLUMINANCE, )
-    DEFAULT_VALUES              = {DATA_NAMES[0]: 100.}
     
     ADDRESS_I2C_GND             = 0x29
     ADDRESS_I2C_FLOAT           = 0x39
@@ -117,14 +109,28 @@ class Apds9301(SensorBase):
     #        10     |           402  ms
     #        11     |           N/A
     #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+    
+    
+    class DataModel(DataModelBase):
+        
+        def setup(self, illum):
+            self._illum = illum
+            
+        @loggable
+        def illuminance(self):
+            return self._illum
+
 
     def __init__(self,
-                 handler: Optional[I2CHandlerBase] = None,
-                 debug: bool = False,
+                 handler: I2CHandlerBase,
                  name: Optional[str] = None) -> None:
-        super().__init__(handler, debug, name)
-        if self._debug:
-            return
+        
+        if not isinstance(handler, I2CHandlerBase):
+            raise HandlerMismatchError(
+                "'handler' must be HandlerI2C."
+            )
+        
+        super().__init__(handler, name)
         
         self._handler: Optional[I2CHandlerBase] = handler
         
@@ -137,34 +143,20 @@ class Apds9301(SensorBase):
         self._level: int = self.BITS_INTR_LEVEL_DISABLED
         self._persistence: int = 0
         
-        if handler is not None and not isinstance(handler, I2CHandlerBase):
-            raise HandlerMismatchError(
-                "'handler' must be HandlerI2C."
-            )
-        
         # setup device when a HandlerI2C is given.
         self.power_up()
         self._id: int = self._read_id()
 
-    def readf(self, *dnames) -> List[float]:
-        super().readf(*dnames)
-
-        # for adjusting its behavior to other sensor classes
-        if len(dnames):
-            for dname in dnames:
-                if dname in Apds9301.DATA_NAMES:
-                    break
-            else:
-                return []
-
-        #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
-        #   Culculating Raw Values
-        #
-        #   NOTE
-        #   *   If wants information about the calculation, see the datasheet p4.
-        #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
-
+    def read(self):
         ch0, ch1 = self._read_raw_data()
+        illum = self.calc_illum(ch0, ch1)
+        
+        model = self.DataModel(self.name)
+        model.setup(illum)
+        return model
+    
+    @classmethod
+    def calc_illum(cls, ch0, ch1) -> float:
         p = ch1 / ch0
         lux = 0.
 
@@ -177,20 +169,7 @@ class Apds9301(SensorBase):
         elif p <= 1.30:
             lux = 0.00146 * ch0 - 0.00112 * ch1
 
-        return [lux]
-
-    def read(self, *dnames) -> Dict[str, float]:
-        super().read(*dnames)
-
-        if len(dnames):
-            for dname in dnames:
-                if dname in Apds9301.DATA_NAMES:
-                    # same as dnames is empty
-                    break
-            else:
-                return {}
-
-        return {Apds9301.DATA_NAMES[0]: self.readf()[0]}
+        return lux
     
     @property
     def id(self):

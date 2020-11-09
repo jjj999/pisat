@@ -1,32 +1,112 @@
 
 
-from typing import Dict, Optional, Tuple, Union, List
+from typing import Optional, Tuple, Union
 from enum import Enum
 
-from pisat.config.type import Logable
-from pisat.config.dname import *
-from pisat.util.cached_property import cached_property
-from pisat.util.type import is_all_None
 from pisat.handler.handler_base import DataBrokenError
 from pisat.handler.i2c_handler_base import I2CHandlerBase
-from pisat.handler.serial_handler_base import SerialHandlerBase 
+from pisat.handler.serial_handler_base import SerialHandlerBase
+from pisat.model.datamodel import DataModelBase, loggable
 from pisat.sensor.sensor_base import SensorBase
-
+from pisat.util.cached_property import cached_property
+from pisat.util.type import is_all_None
 
 class Bno055Base(SensorBase):
     
-    DATA_NAMES: Tuple[str] = (
-        ACCELERATION_X, ACCELERATION_Y, ACCELERATION_Z,
-        GEOMAGNETISM_X, GEOMAGNETISM_Y, GEOMAGNETISM_Z,
-        GYRO_X, GYRO_Y, GYRO_Z,
-        ORIENTATION_YAW, ORIENTATION_ROLL, ORIENTATION_PITCH,
-        ORIENTATION_QUAT_W, ORIENTATION_QUAT_X, ORIENTATION_QUAT_Y, ORIENTATION_QUAT_Z,
-        ACCELERATION_LINEAR_X, ACCELERATION_LINEAR_Y, ACCELERATION_LINEAR_Z,
-        ACCELERATION_GRAVITY_X, ACCELERATION_GRAVITY_Y, ACCELERATION_GRAVITY_Z,
+
+    class DataModel(DataModelBase):
         
-    )
-    DEFAULT_VALUES: Dict[str, Logable] = {}
-    
+        def setup(self, 
+                  acc: Tuple[float] = (None, None, None),
+                  mag: Tuple[float] = (None, None, None),
+                  gyro: Tuple[float] = (None, None, None),
+                  euler: Tuple[float] = (None, None, None, None),
+                  quat: Tuple[float] = (None, None, None),
+                  acc_lin: Tuple[float] = (None, None, None),
+                  acc_gra: Tuple[float] = (None, None, None),
+                  temp: float = None):
+                        
+            self._acc = acc
+            self._mag = mag
+            self._gyro = gyro
+            self._euler = euler
+            self._quat = quat
+            self._acc_lin = acc_lin
+            self._acc_gra = acc_gra
+            self._temp = temp
+            
+            def get_name(tag: str, coo: Tuple[str]):
+                return [f"{self.publisher_name}-{tag}_{x}" for x in coo]
+            
+            self._name_acc = get_name("acc", ("X", "Y", "Z"))
+            self._name_mag = get_name("mag", ("X", "Y", "Z"))
+            self._name_gyro = get_name("gyro", ("X", "Y", "Z"))
+            self._name_euler = get_name("euler", ("X", "Y", "Z"))
+            self._name_quat = get_name("quat", ("X", "Y", "Z", "W"))
+            self._name_acc_lin = get_name("acc_lin", ("X", "Y", "Z"))
+            self._name_acc_gra = get_name("acc_gra", ("X", "Y", "Z"))
+            
+        @loggable
+        def acc(self):
+            return self._acc
+        
+        @acc.formatter
+        def acc(self):
+            return {name: val for name, val in zip(self._name_acc, self._acc)}
+        
+        @loggable
+        def mag(self):
+            return self._mag
+        
+        @mag.formatter
+        def mag(self):
+            return {name: val for name, val in zip(self._name_mag, self._mag)}
+        
+        @loggable
+        def gyro(self):
+            return self._gyro
+        
+        @gyro.formatter
+        def gyro(self):
+            return {name: val for name, val in zip(self._name_gyro, self._gyro)}
+        
+        @loggable
+        def euler(self):
+            return self._euler
+        
+        @euler.formatter
+        def euler(self):
+            return {name: val for name, val in zip(self._name_euler, self._euler)}
+        
+        @loggable
+        def quat(self):
+            return self._quat
+        
+        @quat.formatter
+        def quat(self):
+            return {name: val for name, val in zip(self._name_quat, self._quat)}
+        
+        @loggable
+        def acc_lin(self):
+            return self._acc_lin
+        
+        @acc_lin.formatter
+        def acc_lin(self):
+            return {name: val for name, val in zip(self._name_acc_lin, self._acc_lin)}
+        
+        @loggable
+        def acc_gra(self):
+            return self._acc_gra
+        
+        @acc_gra.formatter
+        def acc_gra(self):
+            return {name: val for name, val in zip(self._name_acc_gra, self._acc_gra)}
+                
+        @loggable
+        def temp(self):
+            return self._temp
+
+
     #   RESISTOR ADDRESS
     class RegPage0(Enum):
         CHIP_ID = 0x00
@@ -794,13 +874,8 @@ class Bno055Base(SensorBase):
         
         self._interrupt_enabled = self.InterruptEnabled()
         self._interrupt_mask = self.InterruptMask()
-        
-    def readf(self, *dnames: Tuple[str, ...]) -> List[Logable]:
-        # for debug mode
-        debugging = super().readf(*dnames)
-        if debugging:
-            return debugging
-        
+            
+    def read(self):
         raw = self._retreive_data()
         vec_acc = self._calc_vector(raw[:6], self._calc_acc)
         vec_mag = self._calc_vector(raw[6:12], self._calc_mag)
@@ -811,15 +886,10 @@ class Bno055Base(SensorBase):
         vec_grv_acc = self._calc_vector(raw[38:44], self._calc_acc)
         temp = self._calc_temp(raw[44])
         
-        result = []
-        if len(dnames):
-            for vec in (vec_acc, vec_mag, vec_gyro, vec_euler, vec_quaternion, vec_lin_acc, vec_grv_acc):
-                result.extend(vec)
-            result.append(temp)
-            return result
-        else:
-            for dname in dnames:
-                pass
+        model = self.DataModel(self.name)
+        model.setup(acc=vec_acc, mag=vec_mag, gyro=vec_gyro, euler=vec_euler,
+                    quat=vec_quaternion, acc_lin=vec_lin_acc, acc_gra=vec_grv_acc, temp=temp)
+        return model
         
     def _read_single_byte(self, reg: int) -> int:
         pass

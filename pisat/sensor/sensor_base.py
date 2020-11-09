@@ -38,12 +38,17 @@ Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
 pisat.core.logger.SensorController
 """
 
-from typing import Generic, Set, Tuple, Optional, Type
+from typing import Generic, Set, Tuple, Optional, Type, TypeVar
 
 from pisat.base.component import Component
 from pisat.base.component_group import ComponentGroup
-from pisat.config import DataModelBase, DataModelGen, LinkedDataModelBase, LinkedDataModelGen
+from pisat.model.datamodel import DataModelBase
+from pisat.model.linked_datamodel import LinkedDataModelBase
 from pisat.handler.handler_base import HandlerBase
+
+
+Model = TypeVar("Model", DataModelBase)
+LinkedModel = TypeVar("LinkedModel", LinkedDataModelBase)
 
 
 class HandlerMismatchError(Exception):
@@ -56,7 +61,7 @@ class HandlerNotSetError(Exception):
     pass
 
 
-class SensorBase(Component, Generic[DataModelGen]):
+class SensorBase(Component, Generic[Model]):
     """An element of the sensor set. 
     
     Diversity of the sensor system is one of the classes of SensorBase. 
@@ -95,7 +100,7 @@ class SensorBase(Component, Generic[DataModelGen]):
         
         self._handler: Optional[HandlerBase] = handler
         
-    def read(self) -> DataModelGen:
+    def read(self) -> Model:
         """Read data of sensor.
         
         This method is an abstract method. Implementation of the method 
@@ -109,7 +114,7 @@ class SensorBase(Component, Generic[DataModelGen]):
         pass
     
 
-class SensorGroup(SensorBase, ComponentGroup, Generic[LinkedDataModelGen]):
+class SensorGroup(SensorBase, ComponentGroup, Generic[LinkedModel]):
     """A container of objects of SensorBase. 
     
     SensorGroup is a component group and also a sensor, 
@@ -120,7 +125,7 @@ class SensorGroup(SensorBase, ComponentGroup, Generic[LinkedDataModelGen]):
     """
 
     def __init__(self, 
-                 model: Type[LinkedDataModelGen], 
+                 model: Type[LinkedModel], 
                  name: Optional[str] = None) -> None:
         """
         Parameters
@@ -194,7 +199,7 @@ class SensorGroup(SensorBase, ComponentGroup, Generic[LinkedDataModelGen]):
         except KeyError:
             raise ValueError("The SensorGroup doesn't have the sensor.")
 
-    def read(self) -> LinkedDataModelGen:
+    def read(self) -> LinkedModel:
         """Read data of sensor as a dictionary.
 
         Returns

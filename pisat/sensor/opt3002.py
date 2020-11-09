@@ -1,9 +1,9 @@
 
 
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 
-from pisat.config.type import Logable
 from pisat.handler.i2c_handler_base import I2CHandlerBase
+from pisat.model.datamodel import DataModelBase, loggable
 from pisat.sensor.sensor_base import SensorBase
 from pisat.util.cached_property import cached_property
 from pisat.util.deco import restricted_setter, restricted_range_setter
@@ -11,9 +11,16 @@ from pisat.util.deco import restricted_setter, restricted_range_setter
 
 class Opt3002(SensorBase):
     
-    # TODO
-    DATA_NAMES: Tuple[str] = ("IRRADIANCE")
-    DEFAULT_VALUES: Dict[str, Logable] = {}
+    
+    class DataModel(DataModelBase):
+        
+        def setup(self, irr: float):
+            self._irr = irr
+            
+        @loggable
+        def irradiance(self):
+            return self._irr
+        
     
     class AddrI2C:
         GND = 0b1000100
@@ -256,13 +263,13 @@ class Opt3002(SensorBase):
         self._handler: Optional[I2CHandlerBase] = handler
         self._config = self.Config()
         
-    # TODO
-    def readf(self, *dnames: Tuple[str, ...]) -> List[Logable]:
-        pass
-    
-    # TODO
-    def read(self, *dnames: Tuple[str, ...]) -> Dict[str, Logable]:
-        pass
+    def read(self):
+        exponent, mantissa = self._read_raw_data()
+        irr = self.Data.calc_optical_power(exponent, mantissa)
+        
+        model = self.DataModel(self.name)
+        model.setup(irr)
+        return model
     
     @cached_property
     def id(self) -> int:
