@@ -38,11 +38,11 @@ class loggable(Generic[Model, GetReturn]):
         self._fmat = fmat
         return self
     
-    def extract(self, model: Model) -> Dict[str, Loggable]:
+    def extract(self, model: Model, dname: str) -> Dict[str, Loggable]:
         # Default formatting
         if self._fmat is None:
-            name = model.get_tag(self)
-            return {name: self._fget(model)}
+            name = model.get_tag(dname)
+            return {name: getattr(model, dname)}
         # User-defined formatting
         else:
             return self._fmat(model)
@@ -86,9 +86,8 @@ class DataModelBase(Generic[Publisher]):
     def publisher_name(self) -> str:
         return self._publisher.name
     
-    def get_tag(self, logg: loggable) -> str:
-        name_loggable = logg._fget.__name__
-        return f"{self.publisher}-{name_loggable}"
+    def get_tag(self, dname: str) -> str:
+        return f"{self.publisher.name}-{dname}"
     
     @class_property
     def loggables(cls) -> List[Tuple[str, loggable]]:
@@ -96,8 +95,8 @@ class DataModelBase(Generic[Publisher]):
     
     def extract(self) -> Dict[str, Loggable]:
         result = {}
-        for _, logg in self.loggables:
-            result.update(logg.extract(self))
+        for dname, logg in self.loggables:
+            result.update(logg.extract(self, dname))
             
         return result
         
