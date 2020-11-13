@@ -28,18 +28,10 @@ class HcSr04(SensorBase):
     VELOCITY_SOUND_AIR = 340.65
     
     def __init__(self,
-                 input: Optional[DigitalInputHandlerBase] = None,
-                 output: Optional[DigitalOutputHandlerBase] = None,
-                 debug: bool = False,
+                 input: DigitalInputHandlerBase,
+                 output: DigitalOutputHandlerBase,
                  name: Optional[str] = None) -> None:
-        super().__init__(debug=debug, name=name)
-        if not debug:
-            if input is None and output is None:
-                raise ValueError(
-                    "'input' and 'output' both must be given when not debugging mode."
-                )
-        else:
-            return
+        super().__init__(name=name)
         
         self._handler_input = input
         self._handler_output = output

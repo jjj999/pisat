@@ -11,3 +11,6 @@ from pisat.sensor.hc_sr04 import HcSr04
 
 from pisat.sensor.serial_gps import SerialGPS
 from pisat.sensor.sam_m8q import SamM8Q
+from pisat.sensor.gysfdmaxb import Gysfdmaxb
+
+from pisat.sensor.number_generator import NumberGenerator
