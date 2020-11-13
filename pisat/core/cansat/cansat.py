@@ -95,13 +95,11 @@ class CanSat:
         """
         if not isinstance(context, Context):
             raise TypeError(
-                "'context' must be Context, but {} was given."
-                .format(context.__class__.__name__)
+                "'context' must be Context."
             )
         if not isinstance(manager, ComponentManager):
             raise TypeError(
-                "'manager' must be ComponentManager, but {} was given."
-                .format(manager.__class__.__name__)
+                "'manager' must be ComponentManager."
             )
         if dlogger is not None and not isinstance(dlogger, DataLogger):
             raise TypeError(
@@ -193,10 +191,6 @@ class CanSat:
         """
         self._node.exit()
         
-        # reset all readabilites of data logger
-        if self._dlogger is not None:
-            self._dlogger.reset_all()
-        
     def cycle(self) -> Any:
         """Execute lifecycle of the current Node
         
@@ -221,8 +215,7 @@ class CanSat:
             
             if self._destination[judged] is not self._current:
                 break
-        self.log(self._current, 
-                 "{} {}".format(self.MESSAGE_NODE_JUDGE_DETECTED, judged))
+        self.log(self._current, f"{self.MESSAGE_NODE_JUDGE_DETECTED} {judged}")
         
         self.log(self._current, self.MESSAGE_NODE_JUDGE_FINISH)
         self._event.set(judged)
