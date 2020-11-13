@@ -1,55 +1,73 @@
 
-from typing import Dict, Any
-from pprint import pprint
+import time
+import random
+import unittest
 
-from pisat.core.nav import Node
-from pisat.core.nav import Context
-import pisat.sensor.const as const
-from pisat.sensor.sensor import Bme280
+from pisat.core.logger import SensorController
+from pisat.core.nav import Node, Context
+from pisat.model import cached_loggable, LinkedDataModelBase, linked_loggable
+from pisat.sensor import NumberGenerator
 
 
-bme280 = Bme280(debug=True)
+NAME_NUMBERGENERATOR = "numgen"
+
+
+class LinkedDataModel(LinkedDataModelBase):
+    num = linked_loggable(NumberGenerator.DataModel.num, NAME_NUMBERGENERATOR)
+    
+    @cached_loggable
+    def num_sqrt(self):
+        return self.num ** 2
+
 
 class TestNode1(Node):
     
-    def enter(self):
-        self.bme280 = bme280
+    model = LinkedDataModel
     
-    def judge(self, data: Dict[str, Any]) -> bool:
-        if data[const.DATA_PRESS] > 1000.:
+    def judge(self, data: LinkedDataModel) -> bool:
+        print(f"TestNode1 num_sqrt: {data.num_sqrt}")
+        if data.num_sqrt < 0.5:
             return True
         else:
             return False
         
-    def control(self):
-        print(self.bme280.read())
-        
-    def exit(self):
-        pass
     
 class TestNode2(Node):
     
-    def enter(self):
-        self.bme280 = bme280
+    model = LinkedDataModel
     
-    def judge(self, data: Dict[str, Any]) -> bool:
-        if data[const.DATA_PRESS] > 1000.:
+    def judge(self, data: LinkedDataModel) -> bool:
+        print(f"TestNode2 num_sqrt: {data.num_sqrt}")
+        if data.num_sqrt > 0.5:
             return True
         else:
             return False
         
-    def control(self):
-        print(self.bme280.read())
         
-    def exit(self):
-        pass
+class TestNodeContext(unittest.TestCase):
     
-    
-context = Context({TestNode1: {True: TestNode2, False: TestNode1},
-                   TestNode2: None}, 
-                  start=TestNode1, 
-                  end=TestNode2)
-node1 = TestNode1()
-
-pprint(context.next(node1.judge({const.DATA_PRESS: 800})))
-pprint(context.next(False))
+    def setUp(self) -> None:
+        self.context = Context({TestNode1: {True: TestNode2, False: TestNode1},
+                                TestNode2: {True: None, False: TestNode2}}, 
+                                start=TestNode1)
+        numgen = NumberGenerator(random.random, name=NAME_NUMBERGENERATOR)
+        self.sencon = SensorController(LinkedDataModel, name="sencon")
+        self.sencon.append(numgen)
+        
+    def test_flow(self):
+        node = self.context.start(None, None)
+        while True:
+            data = self.sencon.read()
+            result = node.judge(data)
+            
+            next = self.context.next(result)
+            if next is None:
+                break
+            
+            if next != node.__class__:
+                print(f"{node.__class__.__name__} detected: {result}")
+                node = next(None, None)
+                
+        
+if __name__ == "__main__":
+    unittest.main()
