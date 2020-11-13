@@ -204,19 +204,6 @@ class Context:
                 "'node' must be a subclass of Node class"
             )
 
-        # check if given 'destination' is appropriate.
-        for goal in dest.values():
-            if not (issubclass(goal, Node) or goal is None):
-                raise TypeError(
-                    "Values of 'dest' must be subclasses of Node class or None."
-                )
-                
-        # check if a data model is given
-        if not issubclass(node.model, LinkedDataModelBase) or node.model is not None:
-            raise TypeError(
-                f"'model' of Node must be a subclass of {LinkedDataModelBase.__name__} or None."
-            )
-
         if start:
             # check if the start node is duplicated
             if self._start is None:

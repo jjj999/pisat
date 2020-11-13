@@ -17,14 +17,14 @@ pisat.core.nav.Context
 pisat.core.cansat.CanSat
 """
 
-from typing import Any, Generic, Type, TypeVar
+from typing import Any, Generic, TypeVar, Union
 
 from pisat.core.manager.component_manager import ComponentManager
 from pisat.core.nav.post_event import PostEvent
 from pisat.model.linked_datamodel import LinkedDataModelBase
 
 
-LinkedModel = TypeVar("LinkedModel", LinkedDataModelBase)
+LinkedModel = TypeVar("LinkedModel")
 
 
 class Node(Generic[LinkedModel]):
@@ -42,8 +42,6 @@ class Node(Generic[LinkedModel]):
     - enter
     - judge
     - control
-    - catched
-    - verify
     - exit
     
     These methods are relative to lifecycle of a Node object.
@@ -73,7 +71,14 @@ class Node(Generic[LinkedModel]):
     """
     
     is_feed: bool = True
-    model: Type[LinkedModel] = None    
+    model: LinkedModel = None
+    
+    def __init_subclass__(cls) -> None:
+        if cls.model is not None and not issubclass(cls.model, LinkedDataModelBase):
+            raise TypeError(
+                f"{cls.__name__}.model must be a subclass of LinkedDataModelBase" +
+                "if used."
+            )
 
     def __init__(self, 
                  manager: ComponentManager,
@@ -116,7 +121,7 @@ class Node(Generic[LinkedModel]):
         """
         pass
 
-    def judge(self, data: LinkedModel) -> Any:
+    def judge(self, data: Union[LinkedModel, None]) -> Any:
         """Judge whether this Node has to move another Node.
         
         This method recieves the result of data logging of one time and try to 
