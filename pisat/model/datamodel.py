@@ -10,7 +10,6 @@ from pisat.util.deco import class_property
 Loggable = Union[str, bytes, int, float, None]
 Model = TypeVar("Model")
 GetReturn = TypeVar("GetReturn")
-Publisher = TypeVar("Publisher", Component)
 
 
 class loggable(Generic[Model, GetReturn]):
@@ -68,27 +67,26 @@ class cached_loggable(loggable):
         )
 
 
-class DataModelBase(Generic[Publisher]):
+class DataModelBase:
     
     def __init_subclass__(cls) -> None:
         cls._loggables = inspect.getmembers(cls, lambda x: isinstance(x, loggable))
     
-    def __init__(self, publisher: Publisher) -> None:
+    def __init__(self, publisher: str) -> None:
+        if not isinstance(publisher, str):
+            raise TypeError("'publisher' must be str.")
+        
         self._publisher = publisher
         
     def setup(self):
         pass
         
     @property
-    def publisher(self) -> Publisher:
+    def publisher(self) -> str:
         return self._publisher
     
-    @property
-    def publisher_name(self) -> str:
-        return self._publisher.name
-    
     def get_tag(self, dname: str) -> str:
-        return f"{self.publisher.name}-{dname}"
+        return f"{self.publisher}-{dname}"
     
     @class_property
     def loggables(cls) -> List[Tuple[str, loggable]]:
