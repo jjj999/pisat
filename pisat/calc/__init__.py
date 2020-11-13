@@ -1,5 +1,3 @@
-from pisat.adapter.adapter_base import AdapterInterface, AdapterBase, AdapterGroup
-
-from pisat.adapter.barometer_adapter import BarometerAdapter
-from pisat.adapter.gps_adapter import GpsAdapter
-from pisat.adapter.navigation_adapter import NavigationAdapter
+from pisat.calc.altitude import press2alti
+from pisat.calc.position import Position
+from pisat.calc.navigator import Navigator
