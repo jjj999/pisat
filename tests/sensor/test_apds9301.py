@@ -2,20 +2,23 @@
 
 import unittest
 
-from pisat.handler import PyserialSerialHandler
-from pisat.sensor import Gysfdmaxb
+import pigpio
+
+from pisat.handler import PigpioI2CHandler
+from pisat.sensor import Apds9301
 from pisat.tester.sensor import SensorTestor
 
 
-PORT_GYFSDMAXB = "/dev/serial0"
+ADDRESS_APDS9301 = 0x49
 
 
-class TestGYSFDMAXB(unittest.TestCase):
+class TestAPDS9301(unittest.TestCase):
     
     def setUp(self) -> None:
-        handler = PyserialSerialHandler(PORT_GYFSDMAXB, baudrate=9600)
-        self.gysfdmaxb = Gysfdmaxb(handler, name="gysdfdmaxb")
-        self.testor = SensorTestor(self.gysfdmaxb)
+        pi = pigpio.pi()
+        handler = PigpioI2CHandler(pi, ADDRESS_APDS9301)
+        self.apds9301 = Apds9301(handler, name="apds9301")
+        self.testor = SensorTestor(self.apds9301)
         
     def test_observe(self):
         self.testor.print_data()

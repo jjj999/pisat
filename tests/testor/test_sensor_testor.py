@@ -1,4 +1,5 @@
 
+
 import unittest
 
 import pigpio
@@ -11,7 +12,7 @@ from pisat.tester.sensor import SensorTestor
 ADDRESS_BME280 = 0x76
 
 
-class TestBME280(unittest.TestCase):
+class TestSensorTestor(unittest.TestCase):
     
     def setUp(self) -> None:
         pi = pigpio.pi()
@@ -19,20 +20,12 @@ class TestBME280(unittest.TestCase):
         self.bme280 = Bme280(handler, name="bme280")
         self.testor = SensorTestor(self.bme280)
         
-    def test_observe(self):
+    def test_print_data(self):
         self.testor.print_data()
         
-    def test_read(self):
-        data = self.bme280.read()
-        
-        self.assertGreater(data.press, 900)
-        self.assertLess(data.press, 1100)
-        self.assertGreater(data.temp, 0)
-        self.assertLess(data.temp, 30)
-        
-    def test_bench_mark(self):
-        result = self.testor.exec_benchmark(show=True)
-        print(f"time to read 100 times: {result}")
+    def test_benchmark(self):
+        result = self.testor.exec_benchmark()
+        self.assertGreater(result, 0.1)
         
         
 if __name__ == "__main__":

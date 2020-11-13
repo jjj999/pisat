@@ -3,19 +3,19 @@
 import unittest
 
 from pisat.handler import PyserialSerialHandler
-from pisat.sensor import Gysfdmaxb
+from pisat.sensor import SamM8Q
 from pisat.tester.sensor import SensorTestor
 
 
-PORT_GYFSDMAXB = "/dev/serial0"
+PORT_SAMM8Q = "/dev/serial0"
 
 
-class TestGYSFDMAXB(unittest.TestCase):
+class TestSAMM8Q(unittest.TestCase):
     
     def setUp(self) -> None:
-        handler = PyserialSerialHandler(PORT_GYFSDMAXB, baudrate=9600)
-        self.gysfdmaxb = Gysfdmaxb(handler, name="gysdfdmaxb")
-        self.testor = SensorTestor(self.gysfdmaxb)
+        handler = PyserialSerialHandler(PORT_SAMM8Q, baudrate=9600)
+        self.samm8q = SamM8Q(handler, name="sam_m8q")
+        self.testor = SensorTestor(self.samm8q)
         
     def test_observe(self):
         self.testor.print_data()
