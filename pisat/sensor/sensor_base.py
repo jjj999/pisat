@@ -35,16 +35,11 @@ classes, sensors can be cooperated with sensors.
 pisat.core.logger.SensorController
 """
 
-from typing import Generic, Optional, TypeVar
+from typing import Optional
 
 from pisat.base.component import Component
 from pisat.model.datamodel import DataModelBase
-from pisat.model.linked_datamodel import LinkedDataModelBase
 from pisat.handler.handler_base import HandlerBase
-
-
-Model = TypeVar("Model", DataModelBase)
-LinkedModel = TypeVar("LinkedModel", LinkedDataModelBase)
 
 
 class HandlerMismatchError(Exception):
@@ -57,7 +52,7 @@ class HandlerNotSetError(Exception):
     pass
 
 
-class SensorBase(Component, Generic[Model]):
+class SensorBase(Component):
     """An element of the sensor set. 
     
     Diversity of the sensor system is one of the classes of SensorBase. 
@@ -96,7 +91,7 @@ class SensorBase(Component, Generic[Model]):
         
         self._handler: Optional[HandlerBase] = handler
         
-    def read(self) -> Model:
+    def read(self) -> DataModelBase:
         """Read data of sensor.
         
         This method is an abstract method. Implementation of the method 
