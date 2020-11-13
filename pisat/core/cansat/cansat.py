@@ -11,9 +11,6 @@ using given Context information.
 This class is the mission executor, so it is deprecated for users
 to call methods of the class except of 'run' method.
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
-
 [info]
 pisat.core.nav.Context
 pisat.core.nav.Node

@@ -4,14 +4,6 @@
 
 pisat.actuator.motor.motor_base
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
-
-[info]
-    
 """
 
 from typing import Union

@@ -11,15 +11,13 @@ whose has a single connection.
 This class is not instanciated by users, but by a
 SocketTransceiver object.
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
 """
 
 from typing import Optional, Union
 
 from pisat.base.component import Component
-from pisat.config.type import TypeAddress
 from pisat.comm.transceiver.comm_stream import CommBytesStream
+from pisat.comm.transceiver.transceiver_base import TypeAddress
 
 
 class CommSocket(Component):

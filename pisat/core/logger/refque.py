@@ -7,12 +7,6 @@ pisat.core.logger.refque
 Implementation of reference to data in LogQueue
 with a lock. 
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
-
-[info]
-OTHER INFORMATION
-
 """
 
 from threading import Lock

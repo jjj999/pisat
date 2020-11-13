@@ -1,7 +1,7 @@
 
 from typing import Callable, Optional, Union
 
-from pisat.config.datamodel import DataModelBase, loggable
+from pisat.model.datamodel import DataModelBase, loggable
 from pisat.sensor.sensor_base import SensorBase
 
 

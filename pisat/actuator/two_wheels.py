@@ -1,5 +1,4 @@
 
-from os import name
 from typing import Optional, Union
 from enum import Enum
 

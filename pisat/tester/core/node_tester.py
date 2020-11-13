@@ -3,7 +3,6 @@ from typing import Any, Dict, Optional, Sequence, Tuple, Type
 
 from pisat.tester.tester_base import Tester
 from pisat.tester.core.util import simulate_judge_from, simulate_judge_from_all
-from pisat.config.type import Logable
 from pisat.core.nav.node import Node
 from pisat.core.nav.post_event import PostEvent
 from pisat.core.manager.component_manager import ComponentManager
@@ -39,7 +38,7 @@ class NodeTester(Tester):
         self._current.enter()
         
     def simulate_judge(self, 
-                       data: Sequence[Dict[str, Logable]],
+                       data,
                        manager: Optional[ComponentManager] = None) -> int:
         """Simulate Node.judge callback from given data and find the index 
         on which a flag is detected.
@@ -75,7 +74,7 @@ class NodeTester(Tester):
             return -1
     
     def simulate_judge_all(self,
-                           data: Sequence[Dict[str, Logable]],
+                           data,
                            manager: Optional[ComponentManager] = None) -> Tuple[Any]:
         """Simulate Node.judge callback by feeding given all data.
 

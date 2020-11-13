@@ -16,9 +16,6 @@ from a Node to another Node. In a Node, the system does what to operate schedule
 by user while observing the transition flag. The way to transitions should be 
 holded by a Context object and how to behave in a state should be defined in a Node.
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
-
 [info]
 pisat.core.nav.Node
 """

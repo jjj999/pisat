@@ -8,9 +8,7 @@ A manager of components for searching internal components.
 This class gives accessibility to internal components and 
 users can retreive the components by using some methods 
 of this class. 
-
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.    
+ 
 """
 
 from typing import Dict, Optional, Tuple, Type

@@ -12,15 +12,12 @@ This class is initialized by pisat system, not by users,
 which means those users have to do are override the callback 
 functions and define a mission graph as a Context.
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
-
 [info]
 pisat.core.nav.Context
 pisat.core.cansat.CanSat
 """
 
-from typing import Dict, Any, Generic, Optional, Type, TypeVar
+from typing import Any, Generic, Type, TypeVar
 
 from pisat.core.manager.component_manager import ComponentManager
 from pisat.core.nav.post_event import PostEvent

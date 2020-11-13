@@ -1,6 +1,7 @@
 
+
 import inspect
-from typing import Any, Callable, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union
+from typing import Callable, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union
 
 from pisat.base.component import Component
 from pisat.util.deco import class_property

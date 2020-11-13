@@ -15,7 +15,7 @@ OTHER INFORMATION
     
 """
 
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Tuple, Union
 from enum import Enum
 
 from serial import Serial

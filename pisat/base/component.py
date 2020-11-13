@@ -9,8 +9,6 @@ The purpose of this class is to make common interfaces
 of objects used in the pisat sytem. Many classes in 
 pisat inheritance this class.
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
 """
 
 from typing import Optional

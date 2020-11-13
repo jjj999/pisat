@@ -10,9 +10,6 @@ this class hold some objects of Component inside. This class can
 make users access to internal components through some methods. 
 Objects of this class is also a component.
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
-
 [info]
 pisat.base.Component
 """

@@ -1,11 +1,11 @@
 
-from typing import Optional, Dict, Tuple, Union
+
+from typing import Optional, Tuple, Union
 
 from pisat.handler.serial_handler_base import SerialHandlerBase
 from pisat.model.datamodel import DataModelBase, loggable
 from pisat.sensor.sensor_base import SensorBase
-from pisat.util.nmea import NMEAParser, GGAModel, GLLModel, RMCModel, ZDAModel
-
+from pisat.util.nmea import NMEAParser
 
 
 class SerialGPS(SensorBase):

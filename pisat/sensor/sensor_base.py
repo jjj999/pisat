@@ -31,17 +31,13 @@ some logging classes like SensorController and DataLogger in order to
 execute retreiving data from multiple sensor objects, and in the logging 
 classes, sensors can be cooperated with sensors.
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
-
 [info]
 pisat.core.logger.SensorController
 """
 
-from typing import Generic, Set, Tuple, Optional, Type, TypeVar
+from typing import Generic, Optional, TypeVar
 
 from pisat.base.component import Component
-from pisat.base.component_group import ComponentGroup
 from pisat.model.datamodel import DataModelBase
 from pisat.model.linked_datamodel import LinkedDataModelBase
 from pisat.handler.handler_base import HandlerBase

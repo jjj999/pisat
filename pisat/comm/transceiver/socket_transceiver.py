@@ -10,9 +10,6 @@ This class wraps a given transceiver and makes
 users get sockets combined with the transceiver, 
 which is like the 'socket' of python.
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
-
 [info]
 pisat.comm.transceiver.CommSocket
 """
@@ -23,8 +20,7 @@ from time import time, sleep
 from typing import Deque, Dict, List, Optional, Tuple, Union
 from threading import Thread
 
-from pisat.config.type import TypeAddress
-from pisat.comm.transceiver.transceiver_base import TransceiverBase
+from pisat.comm.transceiver.transceiver_base import TransceiverBase, TypeAddress
 from pisat.comm.transceiver.comm_stream import CommBytesStream
 from pisat.comm.transceiver.comm_socket import CommSocket
 

@@ -1,4 +1,5 @@
 
+
 from typing import Union
 
 from pisat.actuator.motor_driver_base import MotorDriverBase

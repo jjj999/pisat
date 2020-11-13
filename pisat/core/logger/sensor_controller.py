@@ -17,15 +17,12 @@ In most cases, a user should use the class to be wrapped
 in DataLogger class beacause SensorController have no 
 inner container for holding data logged like LogQueue.
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
-
 [info]
 pisat.core.logger.DataLogger
 pisat.core.logger.LogQueue
 """
 
-from typing import Dict, Generic, List, Set, Tuple, Type, TypeVar, Union, Optional
+from typing import Dict, Generic, Set, Type, TypeVar, Optional
 
 from pisat.base.component_group import ComponentGroup
 from pisat.model.linked_datamodel import LinkedDataModelBase

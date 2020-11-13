@@ -10,9 +10,6 @@ in multi-threading. This class extends threading.Event class
 and has almost same feature as the class, but this class 
 can have a single package when the internal flag get True.
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
-
 [info]
 https://docs.python.org/ja/3/library/threading.html
 """

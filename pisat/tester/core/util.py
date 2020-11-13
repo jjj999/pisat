@@ -1,6 +1,6 @@
 
-from typing import Any, Callable, Optional, Sequence, Tuple
 import csv
+from typing import Any, Callable, Optional, Sequence, Tuple
 
 
 def simulate_judge_from(judge: Callable,

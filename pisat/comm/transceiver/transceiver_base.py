@@ -8,16 +8,16 @@ The base class of transceivers.
 This class defines the interface of transceivers 
 which can exchange flexible data with each other.
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
 """
 
 from typing import Optional, Tuple, Union
 from enum import Enum
 
-from pisat.config.type import TypeAddress
 from pisat.handler.handler_base import HandlerBase
 from pisat.base.component import Component
+
+
+TypeAddress = Tuple[Union[int, str]]
 
 
 class TransceiverBase(Component):

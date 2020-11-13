@@ -13,9 +13,6 @@ control data to read, and so on.
 
 This class is a ComponentGroup.
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
-
 [info]
 pisat.core.logger.SensorController
 pisat.core.logger.LogQueue

@@ -5,9 +5,6 @@
 pisat.comm.transceiver.im920
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
-
 TODO
 * address
 * docstring
@@ -20,7 +17,7 @@ from typing import Deque, Optional, Set, Tuple, Union
 
 from pisat.handler.pyserial_serial_handler import PyserialSerialHandler
 from pisat.comm.transceiver.transceiver_base import TransceiverBase
-from pisat.util.cached_property import cached_property
+from pisat.util.deco import cached_property
 
 
 class Im920(TransceiverBase):

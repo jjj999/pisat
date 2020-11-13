@@ -3,7 +3,6 @@ from typing import Optional, Union
 
 from pisat.handler.i2c_handler_base import I2CHandlerBase
 from pisat.handler.serial_handler_base import SerialHandlerBase
-from pisat.handler.handler_base import HandlerBase
 from pisat.model.datamodel import DataModelBase
 from pisat.sensor.sensor_base import HandlerMismatchError, SensorBase
 from pisat.sensor.serial_gps import SerialGPS

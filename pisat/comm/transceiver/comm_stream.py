@@ -15,8 +15,6 @@ the internal queue has bytes.
 CommTextStream class implements the CommStreamBase as 
 the internal queue has str.
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
 """
 
 from typing import Iterable, Optional, Union

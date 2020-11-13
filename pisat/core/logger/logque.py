@@ -12,9 +12,6 @@ This class can only write the format List[str, Logable] or
 Tuple[str, Logable] data. If you want to the format Dict[str, Logable], 
 then you can use DictLogQueue instead.
 
-[author]
-Yunhyeon Jeong, From The Earth 9th @Tohoku univ.
-
 [info]
 pisat.core.logger.DictLogQueue
 
@@ -24,7 +21,7 @@ from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 import csv
 import math
-from typing import Any, Deque, Generic, Optional, Type, TypeVar
+from typing import Deque, Generic, Optional, TypeVar
 
 from pisat.base.component import Component
 from pisat.model.datamodel import DataModelBase

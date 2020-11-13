@@ -5,7 +5,7 @@ from typing import Optional, Tuple, Union
 from pisat.handler.i2c_handler_base import I2CHandlerBase
 from pisat.model.datamodel import DataModelBase, loggable
 from pisat.sensor.sensor_base import SensorBase
-from pisat.util.cached_property import cached_property
+from pisat.util.deco import cached_property
 from pisat.util.deco import restricted_setter, restricted_range_setter
 
 
