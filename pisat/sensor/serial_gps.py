@@ -33,8 +33,10 @@ class SerialGPS(SensorBase):
         
         @time_utc.formatter
         def time_utc(self):
-            name = self.get_tag(self.__class__.time_utc)
-            value = f"{self._time_utc[0]}:{self._time_utc[1]}:{self._time_utc[2]}"
+            name = self.get_tag("time_utc")
+            value = None
+            if self._time_utc is not None:
+                value = f"{self._time_utc[0]}:{self._time_utc[1]}:{self._time_utc[2]}"
             return {name: value}
         
         @loggable
@@ -67,7 +69,9 @@ class SerialGPS(SensorBase):
         data = self._parser.parse(sentence)
         
         model = self.DataModel(self.name)
-        if data.type == self.FORMAT_GGA:
+        if data is None:
+            model.setup()
+        elif data.type == self.FORMAT_GGA:
             model.setup(time_utc=data.time_utc, 
                         latitude=data.latitude,
                         longitude=data.longitude,
@@ -82,7 +86,5 @@ class SerialGPS(SensorBase):
                         longitude=data.longitude)
         elif data.type == self.FORMAT_ZDA:
             model.setup(time_utc=data.time_utc)
-        else:
-            model.setup()
             
         return model

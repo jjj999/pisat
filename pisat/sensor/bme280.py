@@ -175,7 +175,6 @@ class Bme280(SensorBase):
         # get calibration params and setup temp_fine
         self._dig_temp, self._dig_press, self._dig_hum = \
             Bme280.parse_calib_params(self._read_calib_params())
-        _ = self.read_temp
         _ = self.read()
 
     #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
@@ -376,7 +375,8 @@ class Bme280(SensorBase):
         return h / 4194304
 
     def _read_calib_params(self) -> bytearray:
-        return self._handler.read_seq_byte(*Bme280.REG_CALIB_PARAMS)
+        count, raw = self._handler.read_seq_byte(*Bme280.REG_CALIB_PARAMS)
+        return raw
 
     def _byte2int_press_temp(self, b0, b1, b2) -> int:
         return b0 << 12 | b1 << 4 | b2 >> 4
@@ -393,45 +393,46 @@ class Bme280(SensorBase):
                     self._byte2int_hum(raw[6], raw[7]))
 
     def _read_raw_press(self) -> int:
-        raw = self._handler.read_seq_byte(*Bme280.REG_PRESS)
+        count, raw = self._handler.read_seq_byte(*Bme280.REG_PRESS)
         return self._byte2int_press_temp(raw[0], raw[1], raw[2])
 
     def _read_raw_temp(self) -> int:
-        raw = self._handler.read_seq_byte(*Bme280.REG_TEMP)
+        count, raw = self._handler.read_seq_byte(*Bme280.REG_TEMP)
         return self._byte2int_press_temp(raw[0], raw[1], raw[2])
 
     def _read_raw_hum(self) -> int:
-        raw = self._handler.read_seq_byte(*Bme280.REG_HUM)
+        count, raw = self._handler.read_seq_byte(*Bme280.REG_HUM)
         return self._byte2int_hum(raw[0], raw[1])
 
     # chip_id
 
     def _read_id(self) -> int:
-        return self._handler.read_seq_byte(Bme280.REG_ID)[0]
+        count, raw = self._handler.read(Bme280.REG_ID, 1)
+        return raw[0]
 
     # osrs_h
 
     def _read_ctrl_hum(self) -> int:
-        raw = self._handler.read_seq_byte(Bme280.REG_CTRL_HUM)[0]
-        return raw & 0b00000111
+        count, raw = self._handler.read(Bme280.REG_CTRL_HUM, 1)
+        return raw[0] & 0b00000111
 
     # measuring, im_update
 
     def _read_status(self) -> Tuple[int]:
-        raw = self._handler.read_seq_byte(Bme280.REG_STATUS)[0]
-        return (raw & 0b00001000) >> 3, raw & 0b00000001
+        count, raw = self._handler.read(Bme280.REG_STATUS, 1)
+        return (raw[0] & 0b00001000) >> 3, raw[0] & 0b00000001
 
     # osrs_t, osrt_p, mode
 
     def _read_ctrl_meas(self) -> Tuple[int]:
-        raw = self._handler.read_seq_byte(Bme280.REG_CTRL_MEAS)[0]
-        return (raw & 0b11100000) >> 5, (raw & 0b00011100) >> 2, raw & 0b00000011
+        count, raw = self._handler.read(Bme280.REG_CTRL_MEAS, 1)
+        return (raw[0] & 0b11100000) >> 5, (raw[0] & 0b00011100) >> 2, raw[0] & 0b00000011
 
     # t_sb, filter, spi3w_en
 
-    def _read_config(self) -> bytearray:
-        raw = self._handler.read_seq_byte(Bme280.REG_CONFIG)[0]
-        return (raw & 0b11100000) >> 5, (raw & 0b00011100) >> 2, raw & 0b00000001
+    def _read_config(self) -> Tuple[int]:
+        count, raw = self._handler.read(Bme280.REG_CONFIG, 1)
+        return (raw[0] & 0b11100000) >> 5, (raw[0] & 0b00011100) >> 2, raw[0] & 0b00000001
 
     def _write_reset(self) -> None:
         self._handler.write(Bme280.REG_RESET, Bme280.VALUE_RESET)

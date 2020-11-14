@@ -1,6 +1,6 @@
 
 
-from typing import Optional, Tuple, Union
+from typing import Callable, Optional, Tuple, Union
 from enum import Enum
 
 from pisat.handler.handler_base import DataBrokenError
@@ -36,7 +36,7 @@ class Bno055Base(SensorBase):
             self._temp = temp
             
             def get_name(tag: str, coo: Tuple[str]):
-                return [f"{self.publisher_name}-{tag}_{x}" for x in coo]
+                return [f"{self.publisher}-{tag}_{x}" for x in coo]
             
             self._name_acc = get_name("acc", ("X", "Y", "Z"))
             self._name_mag = get_name("mag", ("X", "Y", "Z"))
@@ -108,7 +108,7 @@ class Bno055Base(SensorBase):
 
 
     #   RESISTOR ADDRESS
-    class RegPage0(Enum):
+    class RegPage0:
         CHIP_ID = 0x00
         ACC_ID = 0x01
         MAG_ID = 0x02
@@ -164,7 +164,6 @@ class Bno055Base(SensorBase):
         GRV_DATA_Z_LSB = 0x32
         GRV_DATA_Z_MSB = 0x33
         TEMP = 0x34
-        LEN_DATA = 45
         
         CALIB_STAT = 0x35
         ST_RESULT = 0x36
@@ -204,7 +203,13 @@ class Bno055Base(SensorBase):
         MAG_RADIUS_LSB = 0x69
         MAG_RADIUS_MSB = 0x6A
         
-    class RegPage1(Enum):
+        FIRST_LEN_DATA = 32
+        SECOND_LEN_DATA = 13
+        FIRST_DATA_REG = ACC_DATA_X_LSB
+        SECOND_DATA_REG = LIA_DATA_X_LSB
+    
+        
+    class RegPage1:
         PAGE_ID = 0x07
         
         ACC_CONFIG = 0x08
@@ -233,35 +238,42 @@ class Bno055Base(SensorBase):
         GYR_AM_THRES = 0x1E
         GYR_AN_SET = 0x1F
         
-    class Page(Enum):
+        
+    class Page:
         PAGE_0 = 0x00
         PAGE_1 = 0x01
         DEFAULT = PAGE_0
+        
         
     class Orientation(Enum):
         WINDOWS = 0
         ANDRROID = 1
         DEFAULT = ANDRROID
         
+        
     class TempUnit(Enum):
         CELSIUS = 0
         FAHRENHEIT = 1
         DEFAULT = CELSIUS
+        
         
     class EulerUnit(Enum):
         DEGREES = 0
         RADIANS = 1
         DEFAULT = DEGREES
         
+        
     class GyroUnit(Enum):
         DPS = 0
         RPS = 1
         DEFAULT = DPS
         
+        
     class AccUnit(Enum):
         MPS2 = 0
         MG = 1
         DEFAULT = MPS2
+        
         
     class OperationMode(Enum):
         CONFIG_MODE = 0b0000
@@ -281,25 +293,30 @@ class Bno055Base(SensorBase):
         
         DEFAULT = CONFIG_MODE
     
+    
     class PowerMode(Enum):
         NORMAL = 0b00
         LOW_POWER = 0b01
         SUSPEND = 0b10
         DEFAULT = NORMAL
     
+    
     class TempSource(Enum):
         ACC = 0b00
         GYRO = 0b01
+    
         
     class Axis(Enum):
         X = 0b00
         Y = 0b01
         Z = 0b10
         INVALID = 0b11
+    
         
     class AxisSign(Enum):
         POSITIVE = 0b0
         NEGATIVE = 0b1
+        
         
     class AccConfig:
         
@@ -389,6 +406,7 @@ class Bno055Base(SensorBase):
             
             return self.build_byte(self._range, self._bandwidth, self._mode)
         
+        
     class GyroConfig:
         
         class Range(Enum):
@@ -477,6 +495,7 @@ class Bno055Base(SensorBase):
             
             return self.build_bytes(self._range, self._bandwidth, self._mode)
         
+        
     class MagConfig:
         
         class Rate(Enum):
@@ -563,6 +582,7 @@ class Bno055Base(SensorBase):
                 
             return self.build_byte(self._rate, self._o_mode, self._p_mode)
             
+            
     class AccSleep:
         
         class Duration(Enum):
@@ -625,6 +645,7 @@ class Bno055Base(SensorBase):
                 self._mode = mode
                 
             return self.build_byte(self._duration, self._mode)
+        
         
     class GyroSleep:
         
@@ -691,6 +712,7 @@ class Bno055Base(SensorBase):
                 self._duration = duration
                 
             return self.build_byte(self._auto_duration, self._duration)
+            
             
     class InterruptEnabled:
             
@@ -765,6 +787,7 @@ class Bno055Base(SensorBase):
         def gyro_am(self):
             return self._gyro_am
         
+        
     class InterruptMask:
         
         class State(Enum):
@@ -837,14 +860,12 @@ class Bno055Base(SensorBase):
         @property
         def gyro_am(self):
             return self._gyro_am
+        
             
     def __init__(self,
-                 handler: Optional[Union[I2CHandlerBase, SerialHandlerBase]] = None,
-                 debug: bool = False,
+                 handler: Union[I2CHandlerBase, SerialHandlerBase],
                  name: Optional[str] = None) -> None:
-        super().__init__(handler=handler, debug=debug, name=name)
-        if debug:
-            return
+        super().__init__(handler, name=name)
         
         self._current_page = self.Page.DEFAULT
         self._operation_mode = self.OperationMode.DEFAULT
@@ -906,54 +927,55 @@ class Bno055Base(SensorBase):
                 
     @cached_property
     def chip_id(self):
-        return self._read_single_byte(self.RegPage0.CHIP_ID.value)
+        return self._read_single_byte(self.RegPage0.CHIP_ID)
     
     @cached_property
     def acc_id(self):
-        return self._read_single_byte(self.RegPage0.ACC_ID.value)
+        return self._read_single_byte(self.RegPage0.ACC_ID)
     
     @cached_property
     def mag_id(self):
-        return self._read_single_byte(self.RegPage0.MAG_ID.value)
+        return self._read_single_byte(self.RegPage0.MAG_ID)
     
     @cached_property
     def gyro_id(self):
-        return self._read_single_byte(self.RegPage0.GYR_ID.value)
+        return self._read_single_byte(self.RegPage0.GYR_ID)
     
     @cached_property
     def sw_rev_id(self):
-        return self._read_single_byte(self.RegPage0.SW_REC_ID_MSB.value) << 8 | \
-                self._read_single_byte(self.RegPage0.SW_REV_ID_LSB.value)
+        return self._read_single_byte(self.RegPage0.SW_REC_ID_MSB) << 8 | \
+                self._read_single_byte(self.RegPage0.SW_REV_ID_LSB)
                 
     @cached_property
     def bl_rev_id(self):
-        return self._read_single_byte(self.RegPage0.BL_REV_ID.value)
+        return self._read_single_byte(self.RegPage0.BL_REV_ID)
     
     def change_page(self) -> None:
         if self._current_page == self.Page.PAGE_0:
-            self._write_single_byte(self.RegPage0.PAGE_ID.value, self.Page.PAGE_1.value)
+            self._write_single_byte(self.RegPage0.PAGE_ID, self.Page.PAGE_1)
         else:
-            self._write_single_byte(self.RegPage1.PAGE_ID.value, self.Page.PAGE_0.value)
+            self._write_single_byte(self.RegPage1.PAGE_ID, self.Page.PAGE_0)
     
     @property
     def current_page_id(self):
         return self._current_page
     
-    def _retreive_data(self) -> bytes:
-        return self._read_seq_bytes(self.RegPage0.ACC_DATA_X_LSB.value, self.RegPage0.LEN_DATA.value)
+    def _retreive_data(self) -> bytearray:
+        raw = bytearray()
+        raw.extend(self._read_seq_bytes(self.RegPage0.FIRST_DATA_REG, self.RegPage0.FIRST_LEN_DATA))
+        raw.extend(self._read_seq_bytes(self.RegPage0.SECOND_DATA_REG, self.RegPage0.SECOND_LEN_DATA))
+        return raw
     
-    def _convert2signed(self, data: bytes) -> int:
-        
-        # The lower index, the smaller byte
-        msb_checker = 1 << 7
-        if data[-1] & msb_checker:
-            data[-1] = - data[-1]
-        
-        result = 0
-        for i, byte in enumerate(data):
-            result |= byte << (i * 8)
-            
-        return result
+    def _calc_vector(self, data: bytes, func: Callable[[int], Union[int, float]]) -> Tuple[float]:
+        vector = []
+        for i in range(len(data) // 2):
+            element = data[i * 2 + 1] << 8 | data[i * 2]
+            if (element & 0x8000):
+                element -= 0xFFFF + 1
+                
+            vector.append(element)
+
+        return tuple(map(func, vector))                
     
     def _calc_acc(self, data: int) -> float:
         # See datasheet page 31
@@ -990,9 +1012,6 @@ class Bno055Base(SensorBase):
             return data
         else:
             return data * 2
-    
-    def _calc_vector(self, data, func) -> Tuple[float]:
-        return tuple([func(data[i * 2 : i * 2 + 1]) for i in range(int(len(data) / 2))])
     
     def _read_calib_stat(self) -> Tuple[int]:
         data = self._read_single_byte(self.RegPage0.CALIB_STAT.value)
@@ -1390,20 +1409,15 @@ class Bno055Base(SensorBase):
     def interrupt_enabled(self):
         return self._interrupt_enabled
     
-    
-    
 
 class I2CBno055(Bno055Base):
     
     def __init__(self,
-                 handler: Optional[I2CHandlerBase] = None,
-                 debug: bool = False,
+                 handler: I2CHandlerBase,
                  name: Optional[str] = None) -> None:
-        super().__init__(handler=handler, debug=debug, name=name)
-        if debug:
-            return
+        super().__init__(handler, name=name)
         
-        self._handler: Optional[I2CHandlerBase] = handler
+        self._handler: I2CHandlerBase = handler
         
     def _read_single_byte(self, reg: int) -> int:
         while True:
@@ -1413,7 +1427,8 @@ class I2CBno055(Bno055Base):
         return data[0]
 
     def _read_seq_bytes(self, reg: int, counts: int) -> bytes:
-        return self._handler.read(reg, counts)
+        count, raw = self._handler.read(reg, counts)
+        return bytes(raw)
         
     def _write_single_byte(self, reg: int, data: bytes) -> None:
         if len(data) > 1:
@@ -1455,17 +1470,12 @@ class UARTBno055(Bno055Base):
         RECEIVE_CHARACTER_TIMEOUT = 0x0A
     
     def __init__(self,
-                 handler: Optional[SerialHandlerBase] = None,
-                 debug: bool = False,
+                 handler: SerialHandlerBase,
                  name: Optional[str] = None) -> None:
-        super().__init__(handler=handler, debug=debug, name=name)
-        if debug:
-            return
-        
+        super().__init__(handler, name=name)
+
         self._handler: Optional[SerialHandlerBase] = handler
-        
-        if isinstance(self._handler, SerialHandlerBase):
-            self._clear_buf()
+        self._clear_buf()
         
     def _clear_buf(self):
         while self._handler.counts_readable:
@@ -1560,22 +1570,18 @@ class UARTBno055(Bno055Base):
 class Bno055(Bno055Base):
     
     def __init__(self,
-                 handler: Optional[Union[I2CHandlerBase, SerialHandlerBase]] = None,
-                 debug: bool = False,
+                 handler: Union[I2CHandlerBase, SerialHandlerBase],
                  name: Optional[str] = None) -> None:
-        super().__init__(handler=handler, debug=debug, name=name)
-        if debug:
-            return
+        super().__init__(handler, name=name)
     
         self._base: Optional[Bno055Base] = None
         
-        if handler is not None:
-            if isinstance(handler, I2CHandlerBase):
-                self._base = I2CBno055(handler=handler, debug=debug, name=name)
-            elif isinstance(handler, SerialHandlerBase):
-                self._base = SerialHandlerBase(handler=handler, debug=debug, name=name)
-                
-            self._read_single_byte = self._base._read_single_byte
-            self._read_seq_bytes = self._base._read_seq_bytes
-            self._write_single_byte = self._base._write_single_byte
+        if isinstance(handler, I2CHandlerBase):
+            self._base = I2CBno055(handler, name=name)
+        elif isinstance(handler, SerialHandlerBase):
+            self._base = SerialHandlerBase(handler, name=name)
+            
+        self._read_single_byte = self._base._read_single_byte
+        self._read_seq_bytes = self._base._read_seq_bytes
+        self._write_single_byte = self._base._write_single_byte
     
