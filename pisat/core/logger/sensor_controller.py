@@ -94,7 +94,7 @@ class SensorController(ComponentGroup, Generic[LinkedModel]):
             NotImplementedError
                 Raised if given sensors are not instances of SensorBase.
         """
-        super().append(self, *sensors)
+        super().append(*sensors)
 
         for sensor in sensors:
             if not isinstance(sensor, SensorBase):
