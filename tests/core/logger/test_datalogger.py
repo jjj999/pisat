@@ -16,7 +16,7 @@ NAME_BME280 = "bme280"
 ADDRESS_BME280 = 0x76
 NAME_BNO055 = "bno055"
 ADDRESS_BNO055 = 0x28
-COUNTS_SAMPLING = 100000
+COUNTS_SAMPLING = 10000
 
 
 class LinkedDataModel(LinkedDataModelBase):
@@ -54,4 +54,8 @@ class TestDataLogger(unittest.TestCase):
         
     def test_read(self):
         self.sample(COUNTS_SAMPLING)
+        
+        
+if __name__ == "__main__":
+    unittest.main()
     

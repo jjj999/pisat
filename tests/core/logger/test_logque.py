@@ -15,7 +15,7 @@ NAME_BME280 = "bme280"
 ADDRESS_BME280 = 0x76
 NAME_BNO055 = "bno055"
 ADDRESS_BNO055 = 0x28
-COUNTS_SAMPLING = 100000
+COUNTS_SAMPLING = 1000
 
 
 class LinkedDataModel(LinkedDataModelBase):
@@ -49,7 +49,8 @@ class TestLogQueue(unittest.TestCase):
         time_init = time.time()
         with self.logque:
             for _ in range(counts):
-                self.logque.append(self.sencon.read())
+                data = self.sencon.read()
+                self.logque.append(data)
         time_finish = time.time()
         
         print(f"time to sample {counts} data: {time_finish - time_init} [sec]")
