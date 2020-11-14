@@ -1,39 +1,49 @@
 
-from os import name
-from typing import *
 import time
+import unittest
 
+import pigpio
+
+from pisat.calc import press2alti
 from pisat.core.cansat import CanSat
 from pisat.core.logger import (
     SensorController, LogQueue, DataLogger, SystemLogger
 )
 from pisat.core.manager import ComponentManager
 from pisat.core.nav import Node, Context
-import pisat.config.dname as dname
-from pisat.sensor.sensor import Bme280, SensorGroup, Apds9301
-from pisat.adapter import BarometerAdapter, AdapterGroup
+from pisat.handler import PigpioI2CHandler
+from pisat.model import cached_loggable, LinkedDataModelBase, linked_loggable
+from pisat.sensor import Bme280, Bno055
 
 
-bme280 = Bme280(debug=True)
-apds9301 = Apds9301(debug=True)
-barometer = BarometerAdapter()
-con = SensorController(SensorGroup(bme280, apds9301), AdapterGroup(barometer))
-queue = LogQueue(1000, con.dnames)
-dlogger = DataLogger(con, queue)
-slogger = SystemLogger()
-slogger.setFileHandler()
+NAME_BME280 = "bme280"
+ADDRESS_BME280 = 0x76
+NAME_BNO055 = "bno055"
+ADDRESS_BNO055 = 0x28
+NAME_DLOGGER = "dlogger"
+NAME_SLOGGER = "slogger"
 
-manager = ComponentManager(dlogger, slogger, recursive=True)
+
+class LinkedDataModel(LinkedDataModelBase):
+    
+    press = linked_loggable(Bme280.DataModel.press, NAME_BME280)
+    temp = linked_loggable(Bme280.DataModel.temp, NAME_BME280)
+    acc = linked_loggable(Bno055.DataModel.acc, NAME_BNO055)
+    
+    @cached_loggable
+    def altitude(self):
+        return press2alti(self.press, self.temp)
 
 
 class TestNode1(Node):
 
     def enter(self):
-        self.bme280 = bme280
-        self.slogger: SystemLogger = self.manager.get_component("SystemLogger")
+        self.slogger = self.manager.get_component(NAME_SLOGGER)
 
-    def judge(self, data: Dict[str, Any]) -> bool:
-        if data[dname.PRESSURE] > 50.:
+    def judge(self, data: LinkedDataModel) -> bool:
+        self.slogger.info(f"judge called in {self.__class__.__name__}")
+        
+        if data.press > 900.:
             return True
         else:
             return False
@@ -44,9 +54,8 @@ class TestNode2(Node):
     def enter(self):
         self.counter = 0
         self.dlogger: DataLogger = self.manager.get_component("DataLogger")
-        self.dlogger.ignore(dname.PRESSURE)
 
-    def judge(self, data: Dict[str, Any]) -> bool:
+    def judge(self, data: LinkedDataModel) -> bool:
 
         self.counter += 1
         if self.counter > 1000:
@@ -55,37 +64,31 @@ class TestNode2(Node):
             return False
 
     def control(self):
-        while True:
-
-            if not self.event.is_set():
-                ref = dlogger.get_ref()
-            else:
-                break
+        while not self.event.is_set():
+            ref = self.dlogger.refqueue
 
 
-class FallingNode(Node):
+class TestCanSat(unittest.TestCase):
+    
+    def setUp(self) -> None:
+        pi = pigpio.pi()
+        handler_bme = PigpioI2CHandler(pi, ADDRESS_BME280)
+        handler_bno = PigpioI2CHandler(pi, ADDRESS_BNO055)
+        self.bme280 = Bme280(handler_bme, name=NAME_BME280)
+        self.bno055 = Bno055(handler_bno, name=NAME_BNO055)
+        self.sencon = SensorController(self.bme280, self.bno055, modelclass=LinkedDataModel)
+        self.logque = LogQueue(LinkedDataModel)
+        self.dlogger = DataLogger(self.sencon, self.logque, name=NAME_DLOGGER)
+        self.slogger = SystemLogger(name=NAME_SLOGGER)
+        self.manager = ComponentManager(self.dlogger, self.slogger, recursive=True)
+        
+        context = Context({TestNode1: {True: TestNode2, False: TestNode1},
+                           TestNode2: {True: None, False: TestNode2},                            },
+                           start=TestNode1)
 
-    def enter(self):
-        dlogger = self.manager.get_component("DataLogger")
-        bme280 = self.manager.get_component("Bme280")
-        dlogger.reset(bme280)
+        self.cansat = CanSat(context, self.manager, dlogger=self.dlogger, slogger=self.slogger)
 
-    def judge(self, data: Dict[str, Any]) -> bool:
-        if data[dname.ALTITUDE_SEALEVEL] < 40000:
-            return True
-        else:
-            return False
-
-
-context = Context({
-    TestNode1: {True: TestNode2, False: TestNode1},
-    TestNode2: {True: FallingNode, False: TestNode2},
-    FallingNode: {True: None, False: FallingNode}
-},
-    start=TestNode1)
-
-cansat = CanSat(context, manager, dlogger=dlogger, slogger=slogger)
-
-init_time = time.time()
-cansat.run()
-print("time: {} sec".format(time.time() - init_time))
+    def test_run(self):
+        init_time = time.time()
+        self.cansat.run()
+        print("time: {} sec".format(time.time() - init_time))
