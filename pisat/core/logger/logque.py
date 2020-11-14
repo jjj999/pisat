@@ -52,7 +52,6 @@ class LogQueue(Component, Generic[Model]):
     LEN_MIN_SUB = 500
     LEN_MAX_SUB = 1000
 
-    FILE_NAME_DEFAULT = "datalog"
     FILE_EXTENSION_DEFAULT = "csv"
 
     THREAD_MAX_WORKERS = 1
@@ -89,7 +88,7 @@ class LogQueue(Component, Generic[Model]):
         self._first = True
         
         if path is None:
-            self._path = get_time_stamp(self.FILE_NAME_DEFAULT, self.FILE_EXTENSION_DEFAULT)
+            self._path = get_time_stamp(self._modelclass.__name__, self.FILE_EXTENSION_DEFAULT)
 
         #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
         #   Inner Queues                                                            #
