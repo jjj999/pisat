@@ -83,7 +83,7 @@ class TestCanSat(unittest.TestCase):
         self.manager = ComponentManager(self.dlogger, self.slogger, recursive=True)
         
         context = Context({TestNode1: {True: TestNode2, False: TestNode1},
-                           TestNode2: {True: None, False: TestNode2},                            },
+                           TestNode2: {True: None, False: TestNode2}},
                            start=TestNode1)
 
         self.cansat = CanSat(context, self.manager, dlogger=self.dlogger, slogger=self.slogger)
@@ -92,3 +92,7 @@ class TestCanSat(unittest.TestCase):
         init_time = time.time()
         self.cansat.run()
         print("time: {} sec".format(time.time() - init_time))
+        
+        
+if __name__ == "__main__":
+    unittest.main()
