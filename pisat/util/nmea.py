@@ -530,14 +530,11 @@ class NMEAParser:
         try:
             sentence = sentence.decode()
         except UnicodeDecodeError:
-            print("UnicodeDecodeError")
             return None
             
         if len(sentence) < 5:
-            print("too short")
             return None
         if sentence[0] != self.HEAD or sentence[-2:] != self.TAIL:
-            print("invalid head or tail")
             return None
                 
         fields = re.split(self.DELIMITER_PATTERN, sentence[1:-2])
