@@ -18,7 +18,7 @@ from pisat.base.component import Component
 from pisat.model.datamodel import DataModelBase
 
 
-Model = TypeVar("Model", DataModelBase)
+Model = TypeVar("Model")
 
 
 class RefQueue(Component, Generic[Model]):

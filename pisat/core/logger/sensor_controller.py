@@ -29,7 +29,7 @@ from pisat.model.linked_datamodel import LinkedDataModelBase
 from pisat.sensor.sensor_base import SensorBase
 
 
-LinkedModel = TypeVar("LinkedModel", LinkedDataModelBase)
+LinkedModel = TypeVar("LinkedModel")
 
 
 class SensorController(ComponentGroup, Generic[LinkedModel]):
@@ -55,7 +55,8 @@ class SensorController(ComponentGroup, Generic[LinkedModel]):
     """
 
     def __init__(self,
-                 modelclass: Type[LinkedModel],
+                 *sensors: SensorBase,
+                 modelclass: Optional[Type[LinkedModel]] = None,
                  name: Optional[str] = None):
         """
         Parameters
@@ -68,14 +69,14 @@ class SensorController(ComponentGroup, Generic[LinkedModel]):
                 name of this Component, by default None
         """
         super().__init__(name=name)
-
-        if not issubclass(modelclass, LinkedDataModelBase):
-            raise TypeError(
-                f"'modelclass' must be a subclass of {LinkedDataModelBase.__name__}"
-            )
             
         self._sensors: Set[SensorBase] = set()
-        self._modelclass = modelclass
+        self._modelclass = None
+        
+        self.append(*sensors)
+        
+        if modelclass is not None:
+            self.set_model(modelclass)
 
     def __len__(self):
         return len(self._sensors)
@@ -120,6 +121,17 @@ class SensorController(ComponentGroup, Generic[LinkedModel]):
             self._sensors.remove(sensor)
         except KeyError:
             raise ValueError("The SensorGroup doesn't have the sensor.")
+        
+    @property
+    def model(self):
+        return self._modelclass
+        
+    def set_model(self, modelclass: Type[LinkedModel]):
+        if not issubclass(modelclass, LinkedDataModelBase):
+            raise TypeError(
+                "'modelclass' must be a subclass of LinkedDataModelBase."
+            )
+        self._modelclass = modelclass
 
     def read(self) -> LinkedModel:
         """Read data of sensor as a dictionary.
@@ -129,6 +141,11 @@ class SensorController(ComponentGroup, Generic[LinkedModel]):
             LinkedDataModelBase
                 A data model which has retrieved data from the sensor.
         """
+        if self._modelclass is None:
+            raise AttributeError(
+                "No model has been set now."
+            )
+        
         model = self._modelclass(self.name)
         data = [sensor.read() for sensor in self._sensors]
         model.sync(*data)

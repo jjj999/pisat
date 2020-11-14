@@ -29,7 +29,7 @@ from pisat.core.logger.sensor_controller import SensorController
 from pisat.model.linked_datamodel import LinkedDataModelBase
 
 
-LinkedModel = TypeVar("LinkedModel", LinkedDataModelBase)
+LinkedModel = TypeVar("LinkedModel")
 
 
 class DataLogger(ComponentGroup, Generic[LinkedModel]):
@@ -56,7 +56,7 @@ class DataLogger(ComponentGroup, Generic[LinkedModel]):
                  con: SensorController,
                  que: LogQueue,
                  reflen: int = 100,
-                 modelclass: Optional[LinkedModel] = None,
+                 modelclass: Optional[Type[LinkedModel]] = None,
                  name: Optional[str] = None):
         """
         Parameters
@@ -72,16 +72,15 @@ class DataLogger(ComponentGroup, Generic[LinkedModel]):
         """
         super().__init__(name=name)
         
-        self._con: SensorController = con
-        self._que: LogQueue = que
-        self._refque: RefQueue = RefQueue(maxlen=reflen)
-        self._modelclass: Optional[LinkedModel] = modelclass
+        self._con = con
+        self._que = que
+        self._refque = RefQueue(maxlen=reflen)
+        self._modelclass = None
+        
+        if modelclass is not None:
+            self.set_model(modelclass)
         
         super().append(con, que, self._refque)
-        
-    @property
-    def dnames(self):
-        return self._con.dnames
     
     @property
     def refqueue(self):
@@ -149,12 +148,11 @@ class DataLogger(ComponentGroup, Generic[LinkedModel]):
         return self._con.get_sensors()
     
     def set_model(self, modelclass: Type[LinkedModel]) -> None:
-        if issubclass(modelclass, LinkedDataModelBase):
-            self._modelclass = modelclass
-        else:
+        if not issubclass(modelclass, LinkedDataModelBase):
             raise TypeError(
-                f"'modelclass' must be a subclass of {LinkedDataModelBase.__name__}."
+                "'modelclass' must be a subclass of LinkedDataModelBase."
             )
+        self._modelclass = modelclass
                 
     def read(self):
         """Execute transaction for reading, caching and saving data log.

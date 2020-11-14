@@ -28,7 +28,7 @@ from pisat.model.datamodel import DataModelBase
 from pisat.util.about_time import get_time_stamp
 
 
-Model = TypeVar("Model", DataModelBase)
+Model = TypeVar("Model")
 
 
 class LogQueue(Component, Generic[Model]):
@@ -58,7 +58,8 @@ class LogQueue(Component, Generic[Model]):
     THREAD_MAX_WORKERS = 1
 
     def __init__(self,
-                 maxlen: int,
+                 modelclass: Model,
+                 maxlen: int = 10000,
                  path: Optional[str] = None,
                  name: Optional[str] = None):
         """
@@ -72,6 +73,13 @@ class LogQueue(Component, Generic[Model]):
                 name of this component, by default None.
         """
         super().__init__(name)
+        
+        if not issubclass(modelclass, DataModelBase):
+            raise TypeError(
+                "'modelclass' must a subclass of DataModelBase."
+            )
+
+        self._modelclass = modelclass
 
         self._limit_main: int = maxlen
         self._limit_sub: int = 0
@@ -102,6 +110,10 @@ class LogQueue(Component, Generic[Model]):
         self._limit_sub: int = len_sub
 
         self.create_newfile(self._path)
+        
+    @property
+    def modelclass(self):
+        return self._modelclass
 
     @classmethod
     def _calc_sublen(cls, len_main: int) -> int:
@@ -163,7 +175,7 @@ class LogQueue(Component, Generic[Model]):
                 whether the file exists, by default False.
         """
         if path is None:
-            self._path = get_time_stamp(self.FILE_NAME_DEFAULT, self.FILE_EXTENSION_DEFAULT)
+            self._path = get_time_stamp(self._modelclass.__name__, self.FILE_EXTENSION_DEFAULT)
         elif isinstance(path, str):
             self._path = path
         else:
@@ -224,6 +236,12 @@ class LogQueue(Component, Generic[Model]):
             x : Any
                 Data.
         """
+        # TODO Verify how large the execution cost is.
+        if not isinstance(x, self._modelclass):
+            raise TypeError(
+                f"'x' must be {self._modelclass.__name__}"
+            )
+        
         self._queue_main.append(x)
 
         if len(self._queue_main) >= self._limit_main:
