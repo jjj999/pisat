@@ -26,6 +26,8 @@ if is_raspberry_pi():
     import pigpio
 
 class PigpioI2CHandler(I2CHandlerBase):
+    
+    MAX_LEN_READ = 32
 
     def __init__(self,
                  pi,
@@ -47,17 +49,24 @@ class PigpioI2CHandler(I2CHandlerBase):
 
     def read(self, reg: int, count: int) -> Tuple[int, bytearray]:
         if reg < 0:
-            ValueError(
+            raise ValueError(
                 "'reg' must be no less than 0."
             )
+        if count > self.MAX_LEN_READ:
+            raise ValueError(
+                f"'count' is out of range. It must be 0 <= 'count' <= {self.MAX_LEN_READ}."
+            )
             
-        data = self._pi.i2c_read_i2c_block_data(self._handle, reg, count)
-        return data[0], bytes(data[1])
+        counts, raw = self._pi.i2c_read_i2c_block_data(self._handle, reg, count)
+        return counts, raw
 
-    def write(self, reg: int, data: Union[bytes, bytearray]) -> None:
+    def write(self, reg: int, data: Union[int, bytes, bytearray]) -> None:
         if reg < 0:
             ValueError(
                 "'reg' must be no less than 0."
             )
 
-        self._pi.i2c_write_i2c_block_data(self._handle, reg, data)
+        if isinstance(data, int):
+            self._pi.i2c_write_byte_data(self._handle, reg, data)
+        else:
+            self._pi.i2c_write_i2c_block_data(self._handle, reg, data)

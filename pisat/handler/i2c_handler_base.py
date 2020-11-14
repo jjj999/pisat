@@ -28,7 +28,17 @@ class I2CHandlerBase(HandlerBase):
     
     def read(self, reg: int, count: int) -> Tuple[int, bytearray]:
         pass
-    
-    def write(self, reg: int, data: Union[bytes, bytearray]) -> None:
+
+    def read_seq_byte(self, *regs: int) -> Tuple[int, bytearray]:
+        result = bytearray()
+        total = 0
+        for reg in regs:
+            count, raw = self.read(reg, 1)
+            total += count
+            result.extend(raw)
+
+        return (total, result)
+
+    def write(self, reg: int, data: Union[int, bytes, bytearray]) -> None:
         pass
     
