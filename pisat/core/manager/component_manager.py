@@ -26,7 +26,7 @@ class ComponentManager(ComponentGroup):
     """
     
     def __init__(self,
-                 *components: Tuple[Component, ...],
+                 *components: Component,
                  recursive: bool = False,
                  name: Optional[str] = None):
         """
