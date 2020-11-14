@@ -36,6 +36,8 @@ class LinkedDataModel(LinkedDataModelBase):
 
 
 class TestNode1(Node):
+    
+    model = LinkedDataModel
 
     def enter(self):
         self.slogger = self.manager.get_component(NAME_SLOGGER)
@@ -50,6 +52,8 @@ class TestNode1(Node):
 
 
 class TestNode2(Node):
+    
+    model = LinkedDataModel
 
     def enter(self):
         self.counter = 0
