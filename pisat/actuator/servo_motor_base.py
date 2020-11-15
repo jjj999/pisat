@@ -2,10 +2,10 @@
 from enum import Enum
 from typing import Union
 
-from pisat.actuator.motor_driver_base import MotorDriverBase
+from pisat.base.component import Component
 
 
-class ServoMotorBase(MotorDriverBase):
+class ServoMotorBase(Component):
     
     # TODO to be overrided
     class Angle(Enum):
