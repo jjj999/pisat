@@ -1181,7 +1181,7 @@ class Bno055Base(SensorBase):
             raise TypeError(
                 "'mode' must be Bno055.OperationMode."
             )
-        self._write_single_byte(self.RegPage0.OPR_MODE.value, mode.value)
+        self._write_single_byte(self.RegPage0.OPR_MODE, mode.value)
         self._operation_mode = mode
             
     @property
@@ -1285,7 +1285,7 @@ class Bno055Base(SensorBase):
                 )
             self._sign_z = z_sign
         
-        return self._sign_x << 2 | self._sign_y << 1 | self._axis_z
+        return self._sign_x.value << 2 | self._sign_y.value << 1 | self._axis_z.value
         
     def remap_axis(self, 
                    x: Optional[Enum] = None,
@@ -1295,10 +1295,10 @@ class Bno055Base(SensorBase):
                    z: Optional[Enum] = None,
                    z_sign: Optional[Enum] = None) -> None:
         if not is_all_None(x, y, z):
-            self._write_single_byte(self.RegPage0.AXIS_MAP_CONFIG.value, 
+            self._write_single_byte(self.RegPage0.AXIS_MAP_CONFIG, 
                                     self._configure_map_config(x, y, z))
         if not is_all_None(x_sign, y_sign, z_sign):
-            self._write_single_byte(self.RegPage0.AXIS_MAP_SIGN.value, 
+            self._write_single_byte(self.RegPage0.AXIS_MAP_SIGN, 
                                     self._configure_map_sign(x_sign, y_sign, z_sign))
             
     @property
@@ -1430,10 +1430,10 @@ class I2CBno055(Bno055Base):
         count, raw = self._handler.read(reg, counts)
         return bytes(raw)
         
-    def _write_single_byte(self, reg: int, data: bytes) -> None:
-        if len(data) > 1:
+    def _write_single_byte(self, reg: int, data: int) -> None:
+        if not(0 <= data <= 0xFF):
             raise ValueError(
-                "Length of data' must be 1."
+                f"'data' must be 0 <= 'data' <= {0xFF}"
             )
         self._handler.write(reg, data)
         

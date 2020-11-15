@@ -38,3 +38,8 @@ class SensorTestor:
                 self._print_data(data)
                 
         return time_total
+    
+    def observe(self, times: int = 100, interval: float = 0.1):
+        for _ in range(times):
+            self.print_data()
+            time.sleep(interval)
