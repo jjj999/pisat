@@ -26,10 +26,11 @@ class RpiGpioPWMHandler(PWMHandlerBase):
             name : Optional[str], optional
                 Name of the component, by default None
         """
-        super().__init__(pin, freq, name=name)
-        
         GPIO.setup(pin, GPIO.OUT)
         self._pwm = GPIO.PWM(pin, freq)
+        
+        super().__init__(pin, freq, name=name)
+        
         self._is_start = False
         
     def close(self) -> None:

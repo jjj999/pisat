@@ -33,11 +33,13 @@ class PigpioPWMHandler(PWMHandlerBase):
             name : Optional[str], optional
                 Name of the component, by default None
         """
+        self._pi = pi
+        
         super().__init__(pin, freq, name=name)
         
-        self._pi = pi
         self._range = range
         self._is_start = False
+        self.set_range(self._range)
         
     @staticmethod
     def calc_true_duty(range: int, duty: Union[int, float]) -> int:
@@ -124,11 +126,12 @@ class PigpioPWMHandler(PWMHandlerBase):
             duty : Optional[Union[int, float]], optional
                 Duty-cycle to be set before the start emitting, by default None
         """
+        self._is_start = True
         if duty is not None:
             self.set_duty(duty)
         
-        self._pi.set_duty(self._duty)
-        self._is_start = True
+        true_duty = self.calc_true_duty(self._range, self._duty)
+        self._pi.set_PWM_dutycycle(self._pin, true_duty)
             
     def stop(self) -> None:
         """Stop emitting pwm signal.
