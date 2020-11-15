@@ -3,11 +3,10 @@
 import inspect
 from typing import Callable, Dict, Generic, List, Optional, Tuple, Type, TypeVar, Union
 
-from pisat.base.component import Component
 from pisat.util.deco import class_property
 
 
-Loggable = Union[str, bytes, int, float, None]
+Loggable = TypeVar("Loggable", str, bytes, int, float, None)
 Model = TypeVar("Model")
 GetReturn = TypeVar("GetReturn")
 
