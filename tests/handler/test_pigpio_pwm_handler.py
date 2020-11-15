@@ -43,7 +43,7 @@ class TestPigpioPWMHandler(unittest.TestCase):
         for i in range(101):
             self.handler.set_duty(i)
             time.sleep(0.1)
-        self.stop()
+        self.handler.stop()
         
         self.assertEqual(self.handler.duty, 100)
 
