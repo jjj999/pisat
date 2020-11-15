@@ -1,6 +1,5 @@
 
 from typing import Optional, Union
-from enum import Enum
 
 from pisat.util.platform import is_raspberry_pi
 from pisat.handler.pwm_handler_base import PWMHandlerBase
@@ -10,75 +9,133 @@ if is_raspberry_pi():
     
 
 class PigpioPWMHandler(PWMHandlerBase):
-            
-    class Range(Enum):
-        MAX = 40000
-        MIN = 25
-        
-        @classmethod
-        def is_valid(cls, range: int) -> bool:
-            if cls.MIN <= range <= cls.MAX:
-                return True
-            else:
-                return False
+    
+    RANGE_MAX = 40000
+    RANGE_MIN = 25
     
     def __init__(self, 
                  pi,
                  pin: int,
                  freq: int,
-                 duty: Union[int, float] = 0,
-                 range: int = 255,
+                 range: int = 40000,
                  name: Optional[str] = None) -> None:
-        super().__init__(pin, freq, duty, name=name)
+        """
+        Parameters
+        ----------
+            pi : pigpio.pi
+                Interface to GPIO
+            pin : int
+                Number of pin which emits pwm signal
+            freq : int
+                Frequency of signal
+            range: int
+                Resolution of duty-cycle, by default 40000
+            name : Optional[str], optional
+                Name of the component, by default None
+        """
+        super().__init__(pin, freq, name=name)
         
-        self._pi: pigpio.pi = pi
-        self._range: int = range
+        self._pi = pi
+        self._range = range
+        self._is_start = False
         
-        # NOTE
-        #   PWM doesn't start in the constructor. If 'start' is called, 
-        #   PWM get started with the current duty cycle.
+    @staticmethod
+    def calc_true_duty(range: int, duty: Union[int, float]) -> int:
+        result = int(duty / 100 * range)
         
+        # compensation to be in the tolerance
+        if result > range:
+            result = range
+        elif result < 0:
+            result = 0
+            
+        return result
+        
+    @classmethod
+    def is_valid_range(cls, range: int) -> bool:
+        return cls.RANGE_MIN <= range <= cls.RANGE_MAX
+    
     @property
-    def range(self):
+    def range(self) -> int:
         return self._range
         
     def set_duty(self, duty: Union[int, float]) -> None:
-        if self.Duty.is_valid(duty):
-            # Calculate an appropriate value for the interface of pigpio.
-            duty_real = int(duty * 0.01 * self._range)
+        """Set duty-cycle of pwm signal to be emitted.
+
+        Parameters
+        ----------
+            duty : Union[int, float]
+                Duty-cycle to be set
+        """
+        if self.is_valid_duty(duty):
+            self._duty = duty
             
-            if duty_real > self._range:
-                duty_real = self._range
-            elif duty_real < 0:
-                duty_real = 0
-                
-            self._pi.set_PWM_dutycycle(self._pin, duty_real)
+            # calculating a true value for the interface of pigpio
+            duty_true = self.calc_true_duty(self._range, duty)
+            
+            # NOTE
+            # If the stert method has been already called and the 
+            # stop not called, this method change duty-cycle and
+            # apply the value to the signal. If the start has not
+            # been called yet or the start not recalled, then
+            # the method only change the current value of duty.
+            if self._is_start:
+                self._pi.set_PWM_dutycycle(self._pin, duty_true)
         else:
             ValueError(
-                "'duty' must be {} <= 'duty' <= {}"
-                .format(self.Duty.MIN.value, self.Duty.MAX.value)
+                f"'duty' must be {self.DUTY_MIN} <= 'duty' <= {self.DUTY_MAX}."
             )
     
     def set_freq(self, freq: int) -> None:
+        """Set frequency of pwm signal to be emitted.
+
+        Parameters
+        ----------
+            freq : int
+                Frequency to be set
+        """
         result = self._pi.set_PWM_frequency(self._pin, freq)
         self._freq = result
         
     def set_range(self, range: int) -> None:
-        if self.Range.is_valid(range):
+        """Change resolution of value of duty-cycle.
+        
+        The bigger given range is, the better resolution duty-cycle has.
+        The max value is 40000, min 25.
+
+        Parameters
+        ----------
+            range : int
+                Resolution of duty-cycle
+        """
+        if self.is_valid_range(range):
             self._pi.set_PWM_range(self._pin, range)
             self._range = range
         else:
             ValueError(
-                "'range' must be {} <= 'range' <= {}"
-                .format(self.Duty.MIN.value, self.Duty.MAX.value)
+                f"'range' must be {self.RANGE_MIN} <= 'range' <= {self.RANGE_MAX}."
             )
         
     def start(self, duty: Optional[Union[int, float]] = None) -> None:
+        """Start emitting pwm signal using current duty-cycle.
+
+        Parameters
+        ----------
+            duty : Optional[Union[int, float]], optional
+                Duty-cycle to be set before the start emitting, by default None
+        """
         if duty is not None:
             self.set_duty(duty)
-        else:
-            self._pi.set_duty(self._duty)
+        
+        self._pi.set_duty(self._duty)
+        self._is_start = True
             
     def stop(self) -> None:
+        """Stop emitting pwm signal.
+        
+        This method only stops emitting signal, not reset the current duty-cycle.
+        """
+        # NOTE Read the docstring.
         self._pi.set_PWM_dutycycle(self._pin, 0)
+        self._is_start = False
         
