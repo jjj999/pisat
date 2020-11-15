@@ -1,5 +1,6 @@
 
 
+import time
 import unittest
 
 import pigpio
@@ -13,13 +14,13 @@ PIN_IN = 21
 PIN_OUT = 20
 
 
-class TestBNO055(unittest.TestCase):
+class TestHcSr04(unittest.TestCase):
     
     def setUp(self) -> None:
         pi = pigpio.pi()
         handler_in = PigpioDigitalInputHandler(pi, PIN_IN, name="echo")
         handler_out = PigpioDigitalOutputHandler(pi, PIN_OUT, name="trigger")
-        self.hcsr04 = HcSr04(handler_in, handler_out, name="hcsr04")
+        self.hcsr04 = HcSr04(handler_in, handler_out, timeout=1, name="hcsr04")
         self.testor = SensorTestor(self.hcsr04)
         
     def test_observe(self):
@@ -29,6 +30,15 @@ class TestBNO055(unittest.TestCase):
         result = self.testor.exec_benchmark(show=True)
         print(f"time to read 100 times: {result}")
         
+    def test_slow_observe(self):
+        for _ in range(500):
+            data = self.hcsr04.read().extract()
+            for name, val in data.items():
+                if val is None:
+                    continue
+                print()
+                print(f"{name}: {val * 100} [cm]")
+                time.sleep(0.1)
         
 if __name__ == "__main__":
     unittest.main()
