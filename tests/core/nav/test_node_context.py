@@ -51,7 +51,7 @@ class TestNodeContext(unittest.TestCase):
                                 TestNode2: {True: None, False: TestNode2}}, 
                                 start=TestNode1)
         numgen = NumberGenerator(random.random, name=NAME_NUMBERGENERATOR)
-        self.sencon = SensorController(LinkedDataModel, name="sencon")
+        self.sencon = SensorController(modelclass=LinkedDataModel, name="sencon")
         self.sencon.append(numgen)
         
     def test_flow(self):
