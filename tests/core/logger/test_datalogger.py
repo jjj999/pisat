@@ -38,7 +38,7 @@ class TestDataLogger(unittest.TestCase):
         handler_bno = PigpioI2CHandler(pi, ADDRESS_BNO055)
         self.bme280 = Bme280(handler_bme, name=NAME_BME280)
         self.bno055 = Bno055(handler_bno, name=NAME_BNO055)
-        self.sencon = SensorController(self.bme280, self.bno055, modelclass=LinkedDataModel)
+        self.sencon = SensorController(LinkedDataModel, self.bme280, self.bno055)
         self.logque = LogQueue(LinkedDataModel)
         self.dlogger = DataLogger(self.sencon, self.logque)
         

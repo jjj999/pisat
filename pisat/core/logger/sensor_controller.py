@@ -55,8 +55,8 @@ class SensorController(ComponentGroup, Generic[LinkedModel]):
     """
 
     def __init__(self,
+                 modelclass: Type[LinkedModel],
                  *sensors: SensorBase,
-                 modelclass: Optional[Type[LinkedModel]] = None,
                  name: Optional[str] = None):
         """
         Parameters
@@ -69,14 +69,16 @@ class SensorController(ComponentGroup, Generic[LinkedModel]):
                 name of this Component, by default None
         """
         super().__init__(name=name)
+        
+        if not issubclass(modelclass, LinkedDataModelBase):
+            raise TypeError(
+                "'modelclass' must be a subclass of LinkedDataModelBase."
+            )
             
         self._sensors: Set[SensorBase] = set()
-        self._modelclass = None
+        self._modelclass = modelclass
         
         self.append(*sensors)
-        
-        if modelclass is not None:
-            self.set_model(modelclass)
 
     def __len__(self):
         return len(self._sensors)
@@ -125,13 +127,6 @@ class SensorController(ComponentGroup, Generic[LinkedModel]):
     @property
     def model(self):
         return self._modelclass
-        
-    def set_model(self, modelclass: Type[LinkedModel]):
-        if not issubclass(modelclass, LinkedDataModelBase):
-            raise TypeError(
-                "'modelclass' must be a subclass of LinkedDataModelBase."
-            )
-        self._modelclass = modelclass
 
     def read(self) -> LinkedModel:
         """Read data of sensor as a dictionary.

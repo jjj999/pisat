@@ -31,7 +31,7 @@ class TestSensorController(unittest.TestCase):
         pi = pigpio.pi()
         handler = PigpioI2CHandler(pi, ADDRESS_BME280)
         self.bme280 = Bme280(handler, name=NAME_BME280)
-        self.sencon = SensorController(self.bme280, modelclass=LinkedDataModel, name="sencon")
+        self.sencon = SensorController(LinkedDataModel, self.bme280, name="sencon")
         
     def test_model(self):
         self.assertEqual(self.sencon.model, LinkedDataModel)

@@ -174,7 +174,7 @@ class CanSat:
             Any
                 Result of giving Node.judge logged data.
         """
-        if self._node.is_feed and self._dlogger is not None and self._node.model is not None:
+        if self._node.is_feed and self._dlogger is not None:
             data = self._dlogger.read()
             return self._node.judge(data)
         else:
