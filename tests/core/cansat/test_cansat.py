@@ -57,7 +57,7 @@ class TestNode2(Node):
 
     def enter(self):
         self.counter = 0
-        self.dlogger: DataLogger = self.manager.get_component("DataLogger")
+        self.dlogger: DataLogger = self.manager.get_component(NAME_DLOGGER)
 
     def judge(self, data: LinkedDataModel) -> bool:
 
@@ -70,6 +70,7 @@ class TestNode2(Node):
     def control(self):
         while not self.event.is_set():
             ref = self.dlogger.refqueue
+            time.sleep(0.001)
 
 
 class TestCanSat(unittest.TestCase):
@@ -84,8 +85,9 @@ class TestCanSat(unittest.TestCase):
         self.logque = LogQueue(LinkedDataModel)
         self.dlogger = DataLogger(self.sencon, self.logque, name=NAME_DLOGGER)
         self.slogger = SystemLogger(name=NAME_SLOGGER)
+        self.slogger.setFileHandler()
         self.manager = ComponentManager(self.dlogger, self.slogger, recursive=True)
-        
+                
         context = Context({TestNode1: {True: TestNode2, False: TestNode1},
                            TestNode2: {True: None, False: TestNode2}},
                            start=TestNode1)
