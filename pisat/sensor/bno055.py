@@ -41,7 +41,7 @@ class Bno055Base(SensorBase):
             self._name_acc = get_name("acc", ("X", "Y", "Z"))
             self._name_mag = get_name("mag", ("X", "Y", "Z"))
             self._name_gyro = get_name("gyro", ("X", "Y", "Z"))
-            self._name_euler = get_name("euler", ("X", "Y", "Z"))
+            self._name_euler = get_name("euler", ("HEADING", "PITCH", "ROLL"))
             self._name_quat = get_name("quat", ("X", "Y", "Z", "W"))
             self._name_acc_lin = get_name("acc_lin", ("X", "Y", "Z"))
             self._name_acc_gra = get_name("acc_gra", ("X", "Y", "Z"))
@@ -107,7 +107,7 @@ class Bno055Base(SensorBase):
             return self._temp
 
 
-    #   RESISTOR ADDRESS
+    # RESISTOR ADDRESS
     class RegPage0:
         CHIP_ID = 0x00
         ACC_ID = 0x01
@@ -239,42 +239,22 @@ class Bno055Base(SensorBase):
         GYR_AN_SET = 0x1F
         
         
-    class Page:
+    class Page(Enum):
         PAGE_0 = 0x00
         PAGE_1 = 0x01
         DEFAULT = PAGE_0
         
         
-    class Orientation(Enum):
-        WINDOWS = 0
-        ANDRROID = 1
-        DEFAULT = ANDRROID
+    class CalibStat(Enum):
+        DONE = 0b11 
+        NOT_DONE = 0b00
         
         
-    class TempUnit(Enum):
-        CELSIUS = 0
-        FAHRENHEIT = 1
-        DEFAULT = CELSIUS
+    class SelfTestResult(Enum):
+        PASS = 1
+        FAILED = 0
         
-        
-    class EulerUnit(Enum):
-        DEGREES = 0
-        RADIANS = 1
-        DEFAULT = DEGREES
-        
-        
-    class GyroUnit(Enum):
-        DPS = 0
-        RPS = 1
-        DEFAULT = DPS
-        
-        
-    class AccUnit(Enum):
-        MPS2 = 0
-        MG = 1
-        DEFAULT = MPS2
-        
-        
+    
     class OperationMode(Enum):
         CONFIG_MODE = 0b0000
         ACC_ONLY = 0b0001
@@ -299,6 +279,36 @@ class Bno055Base(SensorBase):
         LOW_POWER = 0b01
         SUSPEND = 0b10
         DEFAULT = NORMAL
+        
+        
+    class Orientation(Enum):
+        WINDOWS = 0
+        ANDROID = 1
+        DEFAULT = ANDROID
+        
+        
+    class TempUnit(Enum):
+        CELSIUS = 0
+        FAHRENHEIT = 1
+        DEFAULT = CELSIUS
+        
+        
+    class EulerUnit(Enum):
+        DEGREES = 0
+        RADIANS = 1
+        DEFAULT = DEGREES
+        
+        
+    class GyroUnit(Enum):
+        DPS = 0
+        RPS = 1
+        DEFAULT = DPS
+        
+        
+    class AccUnit(Enum):
+        MPS2 = 0
+        MG = 1
+        DEFAULT = MPS2
     
     
     class TempSource(Enum):
@@ -310,8 +320,7 @@ class Bno055Base(SensorBase):
         X = 0b00
         Y = 0b01
         Z = 0b10
-        INVALID = 0b11
-    
+        
         
     class AxisSign(Enum):
         POSITIVE = 0b0
@@ -868,6 +877,20 @@ class Bno055Base(SensorBase):
         super().__init__(handler, name=name)
         
         self._current_page = self.Page.DEFAULT
+        
+        # Calibration Status
+        self._calib_stat_sys = self.CalibStat.NOT_DONE
+        self._calib_stat_gyro = self.CalibStat.NOT_DONE
+        self._calib_stat_acc = self.CalibStat.NOT_DONE
+        self._calib_stat_mag = self.CalibStat.NOT_DONE
+        
+        # Self-Test Status
+        self._sefltest_result_mcu = self.SelfTestResult.FAILED
+        self._selftest_result_mag = self.SelfTestResult.FAILED
+        self._selftest_result_gyro = self.SelfTestResult.FAILED
+        self._sefltest_result_acc = self.SelfTestResult.FAILED
+        
+        # Mode
         self._operation_mode = self.OperationMode.DEFAULT
         self._power_mode = self.PowerMode.DEFAULT
         
@@ -895,7 +918,33 @@ class Bno055Base(SensorBase):
         
         self._interrupt_enabled = self.InterruptEnabled()
         self._interrupt_mask = self.InterruptMask()
-            
+        
+    # NOTE
+    # This method should be called in __init__ of the subclasses.
+    def setup(self) -> None:
+        self._read_map_config()
+        self._read_map_sign()
+        
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
+    #   Abstract Method                                                         #
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
+        
+    # NOTE To be overrided
+    def _read_single_byte(self, reg: int) -> int:
+        pass
+    
+    # NOTE To be overrided
+    def _read_seq_bytes(self, reg: int, counts: int) -> bytes:
+        pass
+    
+    # NOTE To be overrided
+    def _write_single_byte(self, reg: int, data: bytes) -> None:
+        pass
+    
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
+    #   Reading Data                                                            #
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
+    
     def read(self):
         raw = self._retreive_data()
         vec_acc = self._calc_vector(raw[:6], self._calc_acc)
@@ -911,55 +960,7 @@ class Bno055Base(SensorBase):
         model.setup(acc=vec_acc, mag=vec_mag, gyro=vec_gyro, euler=vec_euler,
                     quat=vec_quaternion, acc_lin=vec_lin_acc, acc_gra=vec_grv_acc, temp=temp)
         return model
-        
-    def _read_single_byte(self, reg: int) -> int:
-        pass
-    
-    def _read_seq_bytes(self, reg: int, counts: int) -> bytes:
-        pass
-    
-    def _write_single_byte(self, reg: int, data: bytes) -> None:
-        pass
-    
-    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
-    #   PAGE 0                                                                  #
-    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
-                
-    @cached_property
-    def chip_id(self):
-        return self._read_single_byte(self.RegPage0.CHIP_ID)
-    
-    @cached_property
-    def acc_id(self):
-        return self._read_single_byte(self.RegPage0.ACC_ID)
-    
-    @cached_property
-    def mag_id(self):
-        return self._read_single_byte(self.RegPage0.MAG_ID)
-    
-    @cached_property
-    def gyro_id(self):
-        return self._read_single_byte(self.RegPage0.GYR_ID)
-    
-    @cached_property
-    def sw_rev_id(self):
-        return self._read_single_byte(self.RegPage0.SW_REC_ID_MSB) << 8 | \
-                self._read_single_byte(self.RegPage0.SW_REV_ID_LSB)
-                
-    @cached_property
-    def bl_rev_id(self):
-        return self._read_single_byte(self.RegPage0.BL_REV_ID)
-    
-    def change_page(self) -> None:
-        if self._current_page == self.Page.PAGE_0:
-            self._write_single_byte(self.RegPage0.PAGE_ID, self.Page.PAGE_1)
-        else:
-            self._write_single_byte(self.RegPage1.PAGE_ID, self.Page.PAGE_0)
-    
-    @property
-    def current_page_id(self):
-        return self._current_page
-    
+
     def _retreive_data(self) -> bytearray:
         raw = bytearray()
         raw.extend(self._read_seq_bytes(self.RegPage0.FIRST_DATA_REG, self.RegPage0.FIRST_LEN_DATA))
@@ -1008,53 +1009,214 @@ class Bno055Base(SensorBase):
     
     def _calc_temp(self, data: int) -> int:
         # See datasheet page 37
+        if (data & 0x8000):
+                data -= 0xFFFF + 1
+        
         if self._unit_temp == self.TempUnit.CELSIUS:
             return data
         else:
             return data * 2
+        
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
+    #   For Setting                                                             #
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
     
-    def _read_calib_stat(self) -> Tuple[int]:
-        data = self._read_single_byte(self.RegPage0.CALIB_STAT.value)
-        return (data & 0b11000000, data & 0b00110000, data & 0b00001100, data & 0b00000011)
+    class ConfigContext:
+        
+        def __init__(self, bno055) -> None:
+            self._bno055 = bno055
+            self._last_operation_mode = self._bno055.operation_mode
+        
+        def __enter__(self):
+            self._bno055.change_operation_mode(self._bno055.OperationMode.CONFIG_MODE)
+            return self._bno055
+
+        def __exit__(self, exc_type, exc_value, traceback):
+            self._bno055.change_operation_mode(self._last_operation_mode)
     
     @property
+    def config(self):
+        config = self.ConfigContext(self)
+        return config
+    
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
+    #   ID                                                                      #
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
+                
+    @cached_property
+    def chip_id(self):
+        return self._read_single_byte(self.RegPage0.CHIP_ID)
+    
+    @cached_property
+    def acc_id(self):
+        return self._read_single_byte(self.RegPage0.ACC_ID)
+    
+    @cached_property
+    def mag_id(self):
+        return self._read_single_byte(self.RegPage0.MAG_ID)
+    
+    @cached_property
+    def gyro_id(self):
+        return self._read_single_byte(self.RegPage0.GYR_ID)
+    
+    @cached_property
+    def sw_rev_id(self):
+        return self._read_single_byte(self.RegPage0.SW_REC_ID_MSB) << 8 | \
+                self._read_single_byte(self.RegPage0.SW_REV_ID_LSB)
+                
+    @cached_property
+    def bootloader_rev_id(self):
+        return self._read_single_byte(self.RegPage0.BL_REV_ID)
+                
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
+    #   Page                                                                    #
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #   
+    
+    def change_page(self) -> None:
+        if self._current_page == self.Page.PAGE_0:
+            self._write_single_byte(self.RegPage0.PAGE_ID, self.Page.PAGE_1.value)
+        else:
+            self._write_single_byte(self.RegPage1.PAGE_ID, self.Page.PAGE_0.value)
+    
+    @property
+    def current_page_id(self):
+        return self._current_page
+    
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+    #   Calibration
+    #
+    #   See datasheet Page 47 and 67.
+    #   Calibration status is managed by CalibStatus object.
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -     
+    
+    def load_calib_stat(self) -> None:
+        raw = self._read_single_byte(self.RegPage0.CALIB_STAT)
+        
+        sys = (raw & 0b11_00_00_00) >> 6
+        gyro = (raw & 0b00_11_00_00) >> 4
+        acc = (raw & 0b00_00_11_00) >> 2
+        mag = raw & 0b00_00_00_11
+        
+        for status in self.CalibStat:
+            if sys == status.value:
+                self._calib_stat_sys = status
+            if gyro == status.value:
+                self._calib_stat_gyro = status
+            if acc == status.value:
+                self._calib_stat_acc = status
+            if mag == status.value:
+                self._calib_stat_mag = status
+                    
+    @property
     def calib_stat_sys(self):
-        return self._read_calib_stat()[0]
+        return self._calib_stat_sys
     
     @property
     def calib_stat_gyro(self):
-        return self._read_calib_stat()[1]
+        return self._calib_stat_gyro
     
     @property
     def calib_stat_acc(self):
-        return self._read_calib_stat()[2]
+        return self._calib_stat_acc
     
     @property
     def calib_stat_mag(self):
-        return self._read_calib_stat()[3]
+        return self._calib_stat_mag
     
-    def _read_st_result(self) -> Tuple[int]:
-        data = self._read_single_byte(self.RegPage0.ST_RESULT.value)
-        return (data & 0b00001000, data & 0b00000100, data & 0b00000010, data & 0b00000001)
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+    #   Self-Test
+    #
+    #   See datasheet Page 46 and 67
+    #   Self-Test result is managed by SelfTestResult object.
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+        
+    def load_st_result(self) -> None:
+        raw = self._read_single_byte(self.RegPage0.ST_RESULT)
+        
+        mcu = (raw & 0b0000_1000) >> 3
+        gyro = (raw & 0b0000_0100) >> 2
+        mag = (raw & 0b0000_0010) >> 1
+        acc = raw & 0b0000_0001
+        
+        for status in self.SelfTestResult:
+            if mcu == status.value:
+                self._sefltest_result_mcu = status
+            if gyro == status.value:
+                self._selftest_result_gyro = status
+            if mag == status.value:
+                self._selftest_result_mag = status
+            if acc == status.value:
+                self._selftest_result_acc = status
     
-    @cached_property
+    @property
     def result_self_test_mcu(self):
-        return self._read_st_result()[0]
+        return self._selftest_result_mcu
     
-    @cached_property
+    @property
     def result_self_test_gyro(self):
-        return self._read_st_result()[1]
+        return self._selftest_result_gyro
     
-    @cached_property
+    @property
     def result_self_test_mag(self):
-        return self._read_st_result()[2]
+        return self._selftest_result_mag
     
-    @cached_property
+    @property
     def result_self_test_acc(self):
-        return self._read_st_result()[3]
+        return self._selftest_result_acc
+    
+    def trigger_selftest(self) -> None:
+        if self._external_oscillator:
+            self._write_single_byte(self.RegPage0.SYS_TRIGGER, 0b11100000)
+        else:
+            self._write_single_byte(self.RegPage0.SYS_TRIGGER, 0b01100000)
+    
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+    #   Operation Mode
+    #
+    #   See datasheet Page 20 ~ 23
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+    
+    def change_operation_mode(self, mode: Enum) -> None:
+        if not isinstance(mode, self.OperationMode):
+            raise TypeError(
+                "'mode' must be Bno055.OperationMode."
+            )
+        self._write_single_byte(self.RegPage0.OPR_MODE, mode.value)
+        self._operation_mode = mode
+            
+    @property
+    def operation_mode(self):
+        return self._operation_mode
+    
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+    #   Power Mode
+    #
+    #   See datasheet Page 18 ~ 20
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+    
+    def change_power_mode(self, mode: Enum) -> None:
+        if not isinstance(mode, self.PowerMode):
+            raise TypeError(
+                "'mode' must be Bno055.PowerMode."
+            )
+        
+        with self.config:
+            self._write_single_byte(self.RegPage0.PWR_MODE, mode.value)
+        self._power_mode = mode
+        
+    @property
+    def power_mode(self):
+        return self._power_mode
+    
+    # TODO
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+    #   Interrupt
+    #
+    #   See datasheet Page 38 ~ 45
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
     
     def _read_interrupt_status(self) -> Tuple[int]:
-        data = self._read_single_byte(self.RegPage0.INT_STA.value)
+        data = self._read_single_byte(self.RegPage0.INT_STA)
         return (data & 0b10000000, data & 0b01000000, data & 0b00100000, data & 0b00001000, data & 0b00000100)
     
     @property
@@ -1081,17 +1243,63 @@ class Bno055Base(SensorBase):
     def is_interrupted_gyro_anymotion(self):
         return bool(self._read_interrupt_status()[4])
     
+    def reset_interrupt(self) -> None:
+        if self._external_oscillator:
+            self._write_single_byte(self.RegPage0.SYS_TRIGGER, 0b10100001)
+        else:
+            self._write_single_byte(self.RegPage0.SYS_TRIGGER, 0b00100001)
+            
+    def set_int_mask(self,
+                     acc_nm: Optional[bool] = None,
+                     acc_am: Optional[bool] = None,
+                     acc_hg: Optional[bool] = None,
+                     gyro_hr: Optional[bool] = None,
+                     gyro_am: Optional[bool] = None) -> None:
+        data = self._interrupt_mask._build_byte(acc_nm, acc_am, acc_hg, gyro_hr, gyro_am)
+        self._write_single_byte(self.RegPage1.INT_MSK.value, data)
+        
+    @property
+    def interrupt_mask(self):
+        return self._interrupt_mask
+        
+    def set_int_enabled(self,
+                        acc_nm: Optional[bool] = None,
+                        acc_am: Optional[bool] = None,
+                        acc_hg: Optional[bool] = None,
+                        gyro_hr: Optional[bool] = None,
+                        gyro_am: Optional[bool] = None) -> None:
+        data = self._interrupt_enabled._build_byte(acc_nm, acc_am, acc_hg, gyro_hr, gyro_am)
+        self._write_single_byte(self.RegPage1.INT_EN.value, data)
+    
+    @property
+    def interrupt_enabled(self):
+        return self._interrupt_enabled
+    
+    # TODO
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+    #   Internal Status
+    #
+    #   See datasheet Page 38 ~ 45
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+    
     @property
     def status_system_clock(self):
-        return self._read_single_byte(self.RegPage0.SYS_CLK_STATUS.value) & 0b00000001
+        return self._read_single_byte(self.RegPage0.SYS_CLK_STATUS) & 0b00000001
     
     @property
     def status_system(self):
-        return self._read_single_byte(self.RegPage0.SYS_STATUS.value)
+        return self._read_single_byte(self.RegPage0.SYS_STATUS)
     
     @property
     def status_system_error(self):
-        return self._read_single_byte(self.RegPage0.SYS_ERR.value)
+        return self._read_single_byte(self.RegPage0.SYS_ERR)
+    
+    # TODO
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
+    #   Units
+    #
+    #   See datasheet Page 30 ~ 37
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   
     
     def change_unit(self, 
                     orientation: Optional[Enum] = None,
@@ -1102,9 +1310,9 @@ class Bno055Base(SensorBase):
         data = 0
         if orientation is not None:
             if isinstance(orientation, self.Orientation):
-                if orientation == self.Orientation.ANDRROID:
+                if orientation == self.Orientation.ANDROID:
                     data |= 1 << 7
-                    self._orientation = self.Orientation.ANDRROID
+                    self._orientation = self.Orientation.ANDROID
                 else:
                     self._orientation = self.Orientation.WINDOWS
             else:
@@ -1176,60 +1384,16 @@ class Bno055Base(SensorBase):
     def unit_acc(self):
         return self._unit_acc
     
-    def change_operation_mode(self, mode: Enum) -> None:
-        if not isinstance(mode, self.OperationMode):
-            raise TypeError(
-                "'mode' must be Bno055.OperationMode."
-            )
-        self._write_single_byte(self.RegPage0.OPR_MODE, mode.value)
-        self._operation_mode = mode
-            
-    @property
-    def operation_mode(self):
-        return self._operation_mode
-    
-    def change_power_mode(self, mode: Enum) -> None:
-        if not isinstance(mode, self.PowerMode):
-            raise TypeError(
-                "'mode' must be Bno055.PowerMode."
-            )
-        self._write_single_byte(self.RegPage0.PWR_MODE.value, mode.value)
-        self._power_mode = mode
+    # TODO
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+    #   Sleep Configuration
+    #
+    #   See datasheet page 79 ~ 80
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
         
-    @property
-    def power_mode(self):
-        return self._power_mode
-    
-    def change_oscillator(self, external: bool = False) -> None:
-        if external and not self._external_oscillator:
-            self._write_single_byte(self.RegPage0.SYS_TRIGGER.value, 0b11100001)
-        elif not external and self._external_oscillator:
-            self._write_single_byte(self.RegPage0.SYS_TRIGGER.value, 0b01100001)
-            
-    def reset_interrupt(self) -> None:
-        if self._external_oscillator:
-            self._write_single_byte(self.RegPage0.SYS_TRIGGER.value, 0b10100001)
-        else:
-            self._write_single_byte(self.RegPage0.SYS_TRIGGER.value, 0b00100001)
-            
-    def reset_system(self) -> None:
-        if self._external_oscillator:
-            self._write_single_byte(self.RegPage0.SYS_TRIGGER.value, 0b11000001)
-        else:
-            self._write_single_byte(self.RegPage0.SYS_TRIGGER.value, 0b01000001)
-            
-    def trigger_selftest(self) -> None:
-        if self._external_oscillator:
-            self._write_single_byte(self.RegPage0.SYS_TRIGGER.value, 0b11100000)
-        else:
-            self._write_single_byte(self.RegPage0.SYS_TRIGGER.value, 0b01100000)
-        
-    def change_temp_source(self, src: Enum) -> None:
-        if not isinstance(src, self.TempSource):
-            raise TypeError(
-                "'src' must be Bno055.TempSource."
-            )
-        self._write_single_byte(self.RegPage0.TEMP_SOURCE.value, src.value)
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
+    #   Axis Map                                                                #
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
         
     def _configure_map_config(self,
                               x: Optional[Enum] = None,
@@ -1257,7 +1421,7 @@ class Bno055Base(SensorBase):
                 )
             self._axis_z = z
             
-        return self._axis_z << 4 | self._axis_y << 2 | self._axis_x
+        return self._axis_z.value << 4 | self._axis_y.value << 2 | self._axis_x.value
             
     def _configure_map_sign(self,
                             x_sign: Optional[Enum] = None,
@@ -1285,21 +1449,68 @@ class Bno055Base(SensorBase):
                 )
             self._sign_z = z_sign
         
-        return self._sign_x.value << 2 | self._sign_y.value << 1 | self._axis_z.value
+        return self._sign_x.value << 2 | self._sign_y.value << 1 | self._sign_z.value
+    
+    def reset_axis(self) -> None:
+        self.remap_axis(self.Axis.X, self.Axis.Y, self.Axis.Z)
         
     def remap_axis(self, 
+                   x: Enum,
+                   y: Enum,
+                   z: Enum) -> None:
+        
+        if isinstance(x, self.Axis) and isinstance(y, self.Axis) and isinstance(z, self.Axis):
+            if x != y and y != z and z != x:
+                with self.config:
+                    raw = self._configure_map_config(x, y, z)
+                    self._write_single_byte(self.RegPage0.AXIS_MAP_CONFIG, raw)
+            else:
+                raise ValueError(
+                    "'x', 'y' and 'z' must be all diffrent from each other."
+                )
+        else:
+            raise TypeError(
+                "'x', 'y' and 'z' must be Bno055.Axis.X, Y or Z."
+            )
+                    
+    def reset_sign(self) -> None:
+        self.remap_sign(self.AxisSign.POSITIVE, self.AxisSign.POSITIVE, self.AxisSign.POSITIVE)
+            
+    def remap_sign(self,
                    x: Optional[Enum] = None,
-                   x_sign: Optional[Enum] = None,
                    y: Optional[Enum] = None,
-                   y_sign: Optional[Enum] = None,
-                   z: Optional[Enum] = None,
-                   z_sign: Optional[Enum] = None) -> None:
+                   z: Optional[Enum] = None) -> None:
         if not is_all_None(x, y, z):
-            self._write_single_byte(self.RegPage0.AXIS_MAP_CONFIG, 
-                                    self._configure_map_config(x, y, z))
-        if not is_all_None(x_sign, y_sign, z_sign):
-            self._write_single_byte(self.RegPage0.AXIS_MAP_SIGN, 
-                                    self._configure_map_sign(x_sign, y_sign, z_sign))
+            with self.config:
+                self._write_single_byte(self.RegPage0.AXIS_MAP_SIGN, self._configure_map_sign(x, y, z))
+            
+    def _read_map_config(self) -> None:
+        raw = self._read_single_byte(self.RegPage0.AXIS_MAP_CONFIG)
+        x = raw & 0b00_00_00_11
+        y = (raw & 0b00_00_11_00) >> 2
+        z = (raw & 0b00_11_00_00) >> 4
+        
+        for axis in self.Axis:
+            if x == axis.value:
+                self._axis_x = axis
+            if y == axis.value:
+                self._axis_y = axis
+            if z == axis.value:
+                self._axis_z = axis
+                
+    def _read_map_sign(self) -> None:
+        raw = self._read_single_byte(self.RegPage0.AXIS_MAP_SIGN)
+        x = (raw & 0b00000_1_0_0) >> 2
+        y = (raw & 0b00000_0_1_0) >> 1
+        z = raw & 0b00000_0_0_1
+        
+        for sign in self.AxisSign:
+            if x == sign.value:
+                self._sign_x = sign
+            if y == sign.value:
+                self._sign_y = sign
+            if z == sign.value:
+                self._sign_z = sign
             
     @property
     def axis_x(self):
@@ -1325,9 +1536,12 @@ class Bno055Base(SensorBase):
     def sign_z(self):
         return self._sign_z
 
-    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
-    #   PAGE 1                                                                  #
-    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
+    # TODO
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+    #   Sensor Configuration
+    #
+    #   See datasheet page 26 ~ 29
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
     
     def set_config_acc(self,
                        range: Optional[Enum] = None,
@@ -1362,6 +1576,13 @@ class Bno055Base(SensorBase):
     @property
     def config_gyro(self):
         return self._config_gyro
+    
+    # TODO
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+    #   Sleep Configuration
+    #
+    #   See datasheet page 79 ~ 80
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
         
     def set_sleep_acc(self,
                       duration: Optional[Enum] = None,
@@ -1383,31 +1604,28 @@ class Bno055Base(SensorBase):
     def sleep_gyro(self):
         return self._sleep_gyro
     
-    def set_int_mask(self,
-                     acc_nm: Optional[bool] = None,
-                     acc_am: Optional[bool] = None,
-                     acc_hg: Optional[bool] = None,
-                     gyro_hr: Optional[bool] = None,
-                     gyro_am: Optional[bool] = None) -> None:
-        data = self._interrupt_mask._build_byte(acc_nm, acc_am, acc_hg, gyro_hr, gyro_am)
-        self._write_single_byte(self.RegPage1.INT_MSK.value, data)
-        
-    @property
-    def interrupt_mask(self):
-        return self._interrupt_mask
-        
-    def set_int_enabled(self,
-                        acc_nm: Optional[bool] = None,
-                        acc_am: Optional[bool] = None,
-                        acc_hg: Optional[bool] = None,
-                        gyro_hr: Optional[bool] = None,
-                        gyro_am: Optional[bool] = None) -> None:
-        data = self._interrupt_enabled._build_byte(acc_nm, acc_am, acc_hg, gyro_hr, gyro_am)
-        self._write_single_byte(self.RegPage1.INT_EN.value, data)
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
+    #   Others
+    #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -
     
-    @property
-    def interrupt_enabled(self):
-        return self._interrupt_enabled
+    def change_oscillator(self, external: bool = False) -> None:
+        if external and not self._external_oscillator:
+            self._write_single_byte(self.RegPage0.SYS_TRIGGER, 0b11100001)
+        elif not external and self._external_oscillator:
+            self._write_single_byte(self.RegPage0.SYS_TRIGGER, 0b01100001)
+            
+    def reset_system(self) -> None:
+        if self._external_oscillator:
+            self._write_single_byte(self.RegPage0.SYS_TRIGGER, 0b11000001)
+        else:
+            self._write_single_byte(self.RegPage0.SYS_TRIGGER, 0b01000001)
+        
+    def change_temp_source(self, src: Enum) -> None:
+        if not isinstance(src, self.TempSource):
+            raise TypeError(
+                "'src' must be Bno055.TempSource."
+            )
+        self._write_single_byte(self.RegPage0.TEMP_SOURCE, src.value)
     
 
 class I2CBno055(Bno055Base):
@@ -1584,4 +1802,6 @@ class Bno055(Bno055Base):
         self._read_single_byte = self._base._read_single_byte
         self._read_seq_bytes = self._base._read_seq_bytes
         self._write_single_byte = self._base._write_single_byte
+        
+        self.setup()
     
