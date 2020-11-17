@@ -68,8 +68,12 @@ class cached_loggable(loggable):
 
 class DataModelBase:
     
+    _loggables: List[Tuple[str, loggable]]
+    _cached_loggables: List[Tuple[str, cached_loggable]]
+    
     def __init_subclass__(cls) -> None:
         cls._loggables = inspect.getmembers(cls, lambda x: isinstance(x, loggable))
+        cls._cached_loggables = [(name, val) for name, val in cls._loggables if isinstance(val, cached_loggable)]
     
     def __init__(self, publisher: str) -> None:
         if not isinstance(publisher, str):
@@ -77,9 +81,11 @@ class DataModelBase:
         
         self._publisher = publisher
         
-    def setup(self):
-        pass
-        
+    def setup(self, *args):
+        for name, val in self.cached_loggables:
+            if self.__dict__.get(name) is not None:
+                del self.__dict__[name]
+    
     @property
     def publisher(self) -> str:
         return self._publisher
@@ -90,6 +96,10 @@ class DataModelBase:
     @class_property
     def loggables(cls) -> List[Tuple[str, loggable]]:
         return cls._loggables
+    
+    @class_property
+    def cached_loggables(cls) -> List[Tuple[str, cached_loggable]]:
+        return cls._cached_loggables
     
     def extract(self) -> Dict[str, Loggable]:
         result = {}
