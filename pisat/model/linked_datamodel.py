@@ -14,11 +14,13 @@ class linked_loggable(loggable, Generic[Model, GetReturn, Loggable]):
     def __init__(self,
                  loggable: loggable,
                  publisher: str,
+                 logging: bool = True,
                  default: Optional[Any] = None) -> None:
         super().__init__(loggable._fget)
         self._loggable = loggable
         self._model = None
         self._publisher = publisher
+        self._logging = logging
         self._default = default
     
     def __get__(self, obj: Any, clazz: Optional[type] = None):
@@ -29,7 +31,14 @@ class linked_loggable(loggable, Generic[Model, GetReturn, Loggable]):
                 return self._fget(self._model)
             else:
                 return self._default
-                
+            
+    def extract(self, model: Model, dname: str) -> Dict[str, Loggable]:
+        # Enable not to log the liked data.
+        if self._logging:
+            return super().extract(model, dname)
+        else:
+            return {}
+            
     @property
     def publisher(self) -> str:
         return self._publisher
