@@ -86,5 +86,7 @@ class SerialGPS(SensorBase):
                         longitude=data.longitude)
         elif data.type == self.FORMAT_ZDA:
             model.setup(time_utc=data.time_utc)
+        else:
+            model.setup()
             
         return model
