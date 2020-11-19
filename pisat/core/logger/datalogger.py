@@ -19,13 +19,12 @@ pisat.core.logger.LogQueue
 pisat.core.logger.RefQueue
 """
 
-from typing import Dict, Generic, Optional, Type, TypeVar
+from typing import Generic, Optional, Set, Type, TypeVar
 
 from pisat.base.component_group import ComponentGroup
 from pisat.sensor.sensor_base import SensorBase
 from pisat.core.logger.logque import LogQueue
 from pisat.core.logger.refque import RefQueue
-from pisat.core.logger.sensor_controller import SensorController
 from pisat.model.linked_datamodel import LinkedDataModelBase
 
 
@@ -53,8 +52,8 @@ class DataLogger(ComponentGroup, Generic[LinkedModel]):
     """
 
     def __init__(self, 
-                 con: SensorController,
                  que: LogQueue,
+                 *sensors: SensorBase,
                  reflen: int = 100,
                  modelclass: Optional[Type[LinkedModel]] = None,
                  name: Optional[str] = None):
@@ -72,7 +71,7 @@ class DataLogger(ComponentGroup, Generic[LinkedModel]):
         """
         super().__init__(name=name)
         
-        self._con = con
+        self._sensors: Set[SensorBase] = set()
         self._que = que
         self._refque = RefQueue(maxlen=reflen)
         self._modelclass = None
@@ -80,13 +79,14 @@ class DataLogger(ComponentGroup, Generic[LinkedModel]):
         if modelclass is not None:
             self.set_model(modelclass)
         
-        super().append(con, que, self._refque)
+        super().append(que, self._refque)
+        self.append(*sensors)
     
     @property
     def refqueue(self):
         return self._refque
     
-    def append(self, *sensors) -> None:
+    def append(self, *sensors: SensorBase) -> None:
         """Append and set Sensors or Adapters into SensorController
         
         Parameters
@@ -99,7 +99,14 @@ class DataLogger(ComponentGroup, Generic[LinkedModel]):
             pisat.core.logger.SensorController : SensorController.append is used inside.
         """
         super().append(*sensors)
-        self._con.append(*sensors)
+        
+        for sensor in sensors:
+            if not isinstance(sensor, SensorBase):
+                raise NotImplementedError(
+                    "Components of 'sensors' must be SensorBase."
+                )
+
+            self._sensors.add(sensor)
         
     def remove(self, sensor: SensorBase) -> None:
         """Remove given object from readabilities of all data.
@@ -126,26 +133,10 @@ class DataLogger(ComponentGroup, Generic[LinkedModel]):
         --------
             pisat.core.logger.SensorController : SensorController.remove is used inside.
         """
-        self._con.remove(sensor)
-        
-    def get_sensors(self) -> Dict[str, SensorBase]:
-        """Search Sensor objects from data name.
-
-        Parameters
-        ----------
-            dname : str
-                Data name to search.
-
-        Returns
-        -------
-            List[SensorBase]
-                Searched Sensor objects.
-            
-        See Also
-        --------
-            pisat.core.logger.SensorController : SensorController.get_sensor is used inside.
-        """
-        return self._con.get_sensors()
+        try:
+            self._sensors.remove(sensor)
+        except KeyError:
+            raise ValueError("The SensorGroup doesn't have the sensor.")
     
     def set_model(self, modelclass: Type[LinkedModel]) -> None:
         if not issubclass(modelclass, LinkedDataModelBase):
@@ -168,17 +159,18 @@ class DataLogger(ComponentGroup, Generic[LinkedModel]):
             pisat.core.logger.LogQueue : LogQueue.append is used inside.
             pisat.core.logger.RefQueue : RefQueue.append is used inside.
         """
-        model = self._con.read()
-        self._que.append(model)
-        
         if self._modelclass is None:
-            self._refque.append(model)
-            return model
-        else:
-            linked = self._modelclass(self.name)
-            linked.sync(model)
-            self._refque.append(linked)
-            return linked
+            raise AttributeError(
+                "No model has been set now."
+            )
+
+        data = [sensor.read() for sensor in self._sensors]
+        self._que.append(*data)
+        
+        model = self._modelclass(self.name)
+        model.sync(*data)
+        self._refque.append(model)
+        return model
     
     def close(self):
         """Execute post-process of logging.

@@ -227,7 +227,7 @@ class LogQueue(Component, Generic[Model]):
     #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
     #   Data Appending                                                          #
     #   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   -   #
-    def append(self, x: Model) -> None:
+    def append(self, *x: Model) -> None:
         """Append data.
 
         Parameters
@@ -235,13 +235,10 @@ class LogQueue(Component, Generic[Model]):
             x : Any
                 Data.
         """
-        # TODO Verify how large the execution cost is.
-        if not isinstance(x, self._modelclass):
-            raise TypeError(
-                f"'x' must be {self._modelclass.__name__}"
-            )
-        
-        self._queue_main.append(x)
+        # Configure specified model using given data.
+        model = self._modelclass(self.name)
+        model.sync(*x)
+        self._queue_main.append(model)
 
         if len(self._queue_main) >= self._limit_main:
             self._queue_sub.append(self._queue_main.popleft())
