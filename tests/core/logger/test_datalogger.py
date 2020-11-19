@@ -6,7 +6,7 @@ import unittest
 import pigpio
 
 from pisat.calc import press2alti
-from pisat.core.logger import SensorController, LogQueue
+from pisat.core.logger import LogQueue
 from pisat.handler import PigpioI2CHandler
 from pisat.model import cached_loggable, LinkedDataModelBase, linked_loggable
 from pisat.sensor import Bme280, Bno055
@@ -38,9 +38,8 @@ class TestDataLogger(unittest.TestCase):
         handler_bno = PigpioI2CHandler(pi, ADDRESS_BNO055)
         self.bme280 = Bme280(handler_bme, name=NAME_BME280)
         self.bno055 = Bno055(handler_bno, name=NAME_BNO055)
-        self.sencon = SensorController(LinkedDataModel, self.bme280, self.bno055)
         self.logque = LogQueue(LinkedDataModel)
-        self.dlogger = DataLogger(self.sencon, self.logque)
+        self.dlogger = DataLogger(self.logque, self.bme280, self.bno055)
         
     def sample(self, counts: int):
         time_init = time.time()

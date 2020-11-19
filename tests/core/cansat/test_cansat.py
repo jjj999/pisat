@@ -1,4 +1,6 @@
 
+from pisat.sensor import bno055
+from pisat.sensor import bme280
 import time
 import unittest
 
@@ -7,7 +9,7 @@ import pigpio
 from pisat.calc import press2alti
 from pisat.core.cansat import CanSat
 from pisat.core.logger import (
-    SensorController, LogQueue, DataLogger, SystemLogger
+    LogQueue, DataLogger, SystemLogger
 )
 from pisat.core.manager import ComponentManager
 from pisat.core.nav import Node, Context
@@ -81,9 +83,8 @@ class TestCanSat(unittest.TestCase):
         handler_bno = PigpioI2CHandler(pi, ADDRESS_BNO055)
         self.bme280 = Bme280(handler_bme, name=NAME_BME280)
         self.bno055 = Bno055(handler_bno, name=NAME_BNO055)
-        self.sencon = SensorController(self.bme280, self.bno055, modelclass=LinkedDataModel)
         self.logque = LogQueue(LinkedDataModel)
-        self.dlogger = DataLogger(self.sencon, self.logque, name=NAME_DLOGGER)
+        self.dlogger = DataLogger(self.logque, self.bme280, self.bno055, name=NAME_DLOGGER)
         self.slogger = SystemLogger(name=NAME_SLOGGER)
         self.slogger.setFileHandler()
         self.manager = ComponentManager(self.dlogger, self.slogger, recursive=True)
