@@ -70,26 +70,6 @@ class SensorBase(Component):
     must override the read method. More information, see the references of 
     this class.
     """
-
-    def __init__(self, 
-                 handler: Optional[HandlerBase] = None, 
-                 name: Optional[str] = None) -> None:
-        """
-        Parameters
-        ----------
-            handler : Optional[HandlerBase], optional
-                Handler object if required, by default None
-            name : Optional[str], optional
-                Name of the component, by default None
-        """
-        super().__init__(name=name)
-        
-        #   NOTE
-        #       SensorBase does not force to use a handler
-        #       in its subclasses. If you want not to use
-        #       any handler, you should override __init__.
-        
-        self._handler: Optional[HandlerBase] = handler
         
     def read(self) -> DataModelBase:
         """Read data of sensor.

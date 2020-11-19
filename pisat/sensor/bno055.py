@@ -874,7 +874,9 @@ class Bno055Base(SensorBase):
     def __init__(self,
                  handler: Union[I2CHandlerBase, SerialHandlerBase],
                  name: Optional[str] = None) -> None:
-        super().__init__(handler, name=name)
+        super().__init__(name=name)
+        
+        self._handler = handler
         
         self._current_page = self.Page.DEFAULT
         

@@ -60,7 +60,7 @@ class SamM8Q(SensorBase):
     def __init__(self,
                  handler: Union[I2CHandlerBase, SerialHandlerBase],
                  name: Optional[str] = None) -> None:
-        super().__init__(handler=handler, name=name)
+        super().__init__(name=name)
 
         if isinstance(handler, SerialHandlerBase):
             self._base = UARTSamM8Q(handler=handler)
@@ -70,6 +70,8 @@ class SamM8Q(SensorBase):
             raise HandlerMismatchError(
                 "'handler' must be for UART or I2C."
             )
+            
+        self._handler = handler
             
     def read(self):
         return self._base.read()

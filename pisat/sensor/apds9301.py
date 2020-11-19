@@ -130,7 +130,7 @@ class Apds9301(SensorBase):
                 "'handler' must be HandlerI2C."
             )
         
-        super().__init__(handler, name)
+        super().__init__(name)
         
         self._handler: Optional[I2CHandlerBase] = handler
         

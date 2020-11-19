@@ -137,7 +137,9 @@ class Bme280(SensorBase):
                  m_filter=0b100,
                  spi3w_en=0b0):
 
-        super().__init__(handler, name=name)
+        super().__init__(name=name)
+        
+        self._handler = handler
 
         self._temp_fine: int = 0
         self._dig_temp: tuple = None

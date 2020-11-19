@@ -255,12 +255,11 @@ class Opt3002(SensorBase):
             self._fault_count = val
     
     def __init__(self,
-                 handler: Optional[I2CHandlerBase],
-                 debug: bool = False,
+                 handler: I2CHandlerBase,
                  name: Optional[str] = None) -> None:
-        super().__init__(handler=handler, debug=debug, name=name)
+        super().__init__(name=name)
         
-        self._handler: Optional[I2CHandlerBase] = handler
+        self._handler: I2CHandlerBase = handler
         self._config = self.Config()
         
     def read(self):
