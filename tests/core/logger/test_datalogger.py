@@ -42,6 +42,8 @@ class TestDataLogger(unittest.TestCase):
         self.dlogger = DataLogger(self.logque, self.bme280, self.bno055)
         
     def sample(self, counts: int):
+        self.dlogger.set_model(LinkedDataModel)
+        
         time_init = time.time()
         with self.dlogger:
             for _ in range(counts):

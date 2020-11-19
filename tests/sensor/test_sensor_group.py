@@ -32,8 +32,11 @@ class TestSensorController(unittest.TestCase):
     
     def setUp(self) -> None:
         pi = pigpio.pi()
-        handler = PigpioI2CHandler(pi, ADDRESS_BME280)
-        self.bme280 = Bme280(handler, name=NAME_BME280)
+        handler_bme = PigpioI2CHandler(pi, ADDRESS_BME280)
+        handler_bno = PigpioI2CHandler(pi, ADDRESS_BNO055)
+        self.bme280 = Bme280(handler_bme, name=NAME_BME280)
+        self.bno055 = Bno055(handler_bno, name=NAME_BNO055)
+        self.bno055.change_operation_mode(self.bno055.OperationMode.NDOF)
         self.group = SensorGroup(LinkedDataModel, self.bme280, self.bno055, name="group")
         
     def test_model(self):
@@ -50,15 +53,17 @@ class TestSensorController(unittest.TestCase):
     
     def test_remove(self):
         self.group.remove(self.bme280)
+        self.group.remove(self.bno055)
         self.assertEqual(len(self.group), 0)
         self.group.append(self.bme280)
+        self.group.append(self.bno055)
         
     def test_get_sensors(self):
         dict_sensor = self.group.get_sensors()
         
         for key, val in dict_sensor.items():
-            self.assertEqual(key, NAME_BME280)
-            self.assertEqual(val, self.bme280)
+            self.assertIn(key, (NAME_BME280, NAME_BNO055))
+            self.assertIn(val, (self.bme280, self.bno055))
             
             
 if __name__ == "__main__":
