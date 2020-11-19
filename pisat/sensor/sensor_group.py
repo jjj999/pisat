@@ -32,7 +32,7 @@ from pisat.sensor.sensor_base import SensorBase
 LinkedModel = TypeVar("LinkedModel")
 
 
-class SensorController(ComponentGroup, Generic[LinkedModel]):
+class SensorGroup(ComponentGroup, SensorBase, Generic[LinkedModel]):
     """Controller of SensorGruop and AdapterGroup.
     
     A controller of multiple Sensor and Adapter classes.
@@ -68,7 +68,7 @@ class SensorController(ComponentGroup, Generic[LinkedModel]):
             name : Optional[str], optional
                 name of this Component, by default None
         """
-        super().__init__(name=name)
+        ComponentGroup.__init__(self, name=name)
         
         if not issubclass(modelclass, LinkedDataModelBase):
             raise TypeError(
