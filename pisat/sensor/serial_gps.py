@@ -59,7 +59,7 @@ class SerialGPS(SensorBase):
             raise TypeError(
                 "'handler' must be SerialHandlerBase."
             )
-        super().__init__(handler=handler, name=name)
+        super().__init__(name=name)
 
         self._handler: SerialHandlerBase = handler
         self._parser: NMEAParser = NMEAParser(self.name)
