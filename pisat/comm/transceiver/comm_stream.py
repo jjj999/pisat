@@ -73,7 +73,7 @@ class CommStreamBase:
         pass
     
     def __len__(self):
-        with self._que:
+        with self._lock:
             return len(self._que)
     
 
