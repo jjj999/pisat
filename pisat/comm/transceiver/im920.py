@@ -197,7 +197,12 @@ class Im920(TransceiverBase):
     
     @classmethod
     def decode(cls, data: Union[bytes, bytearray]) -> str:
+        data = cls.decode2utf8(data)
         return data.decode()
+    
+    @classmethod
+    def decode2utf8(cls, data: Union[bytes, bytearray]) -> bytes:
+        return codecs.decode(data, cls.Packet.ENCODING_TRANSMIT.value)
     
     @classmethod
     def decode_addr(cls, data: Union[bytes, bytearray]) -> Tuple[str]:
@@ -303,7 +308,7 @@ class Im920(TransceiverBase):
             dtype, data = self._recv_separate_type()
             if dtype == self.DataType.CONFIG:
                 continue
-            self._add_buf(data)
+            self._add_buf(self.decode2utf8(data))
     
     def _get_params(self, command: str) -> str:
         self._update_buf()

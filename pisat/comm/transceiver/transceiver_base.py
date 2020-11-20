@@ -117,6 +117,10 @@ class TransceiverBase(Component):
         -------
             Tuple[TypeAddress, bytes]
                 Address which data is from, and raw data.
+                
+        Notes
+        -----
+            Returned data should be bytes in UTF-8.
         """
         pass
     
