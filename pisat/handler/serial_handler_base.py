@@ -1,4 +1,5 @@
 
+import time
 from typing import Optional, Tuple, Union
 from enum import Enum
 
@@ -41,13 +42,22 @@ class SerialHandlerBase(HandlerBase):
     def read(self, count: int) -> Tuple[int, bytes]:
         pass
     
-    def readline(self, end: bytes = b'\n') -> bytes:
+    def readline(self, end: bytes = b'\n', timeout: float = 0.) -> bytes:
         result = bytearray()
         cursor = 0
         tail = len(end)
+        time_last = - 1
         while True:
             if not self.counts_readable:
-                break
+                if time_last < 0:
+                    time_last = time.time()
+                    continue
+                if time.time() - time_last > timeout:
+                    break
+                else:
+                    continue
+            else:
+                time_last = - 1
             
             count, char = self.read(1)
             result.extend(char)
