@@ -1,0 +1,15 @@
+INFO : 2020-11-21 03:07:37,474 : TestNode1 : enter
+INFO : 2020-11-21 03:07:37,475 : TestNode1 : start control
+INFO : 2020-11-21 03:07:37,476 : TestNode1 : start judge
+INFO : 2020-11-21 03:07:37,490 : judge called in TestNode1
+INFO : 2020-11-21 03:07:37,491 : TestNode1 : detected True
+INFO : 2020-11-21 03:07:37,491 : TestNode1 : finish judge
+INFO : 2020-11-21 03:07:37,491 : TestNode1 : finish control
+INFO : 2020-11-21 03:07:37,492 : TestNode1 : exit
+INFO : 2020-11-21 03:07:37,492 : TestNode2 : enter
+INFO : 2020-11-21 03:07:37,492 : TestNode2 : start control
+INFO : 2020-11-21 03:07:37,493 : TestNode2 : start judge
+INFO : 2020-11-21 03:07:51,553 : TestNode2 : detected True
+INFO : 2020-11-21 03:07:51,554 : TestNode2 : finish judge
+INFO : 2020-11-21 03:07:51,561 : TestNode2 : finish control
+INFO : 2020-11-21 03:07:51,562 : TestNode2 : exit
