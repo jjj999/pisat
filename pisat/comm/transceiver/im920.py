@@ -145,6 +145,7 @@ class Im920(TransceiverBase):
         self._handler: PyserialSerialHandler = handler
         self._buf: Deque[Tuple[Tuple[str], bytes]] = deque()
         self._rec_id: Set[str] = set()
+        self._rest: Deque[bytes] = deque()
         
         self._update_rec_id()
         
@@ -279,7 +280,7 @@ class Im920(TransceiverBase):
     def _recv_separate_type(self) -> Tuple[Enum, bytes]:
         # remove terminator
         # timeout is for waiting response from the device
-        raw = self._handler.readline(end=self.Packet.TERMINATOR.value, timeout=0.2)[:-2]
+        raw = self._handler.readline(end=self.Packet.TERMINATOR.value, timeout=0.5)[:-2]
         
         if self.DataType.EVIDENCE.value in raw:
             return (self.DataType.TRANSMIT, raw)
@@ -299,6 +300,15 @@ class Im920(TransceiverBase):
     def _add_buf(self, raw: bytes) -> None:
         addr_raw, transmit = raw[:self.Packet.INDEX_LAST_ADDR.value], raw[self.Packet.INDEX_HEAD_TRANSIMIT.value:]
         addr = self.decode_addr(addr_raw)
+        
+        # robust reading
+        if len(transmit) % 2:
+            if len(self._rest):
+                transmit = self._rest.pop() + transmit
+            else:
+                transmit, remain = transmit[:-1], transmit[-1:]
+                self._rest.appendleft(remain)
+                    
         if len(addr) == 3:
             id = (addr[1], )
             self._buf.appendleft((id, self.decode2utf8(transmit)))
