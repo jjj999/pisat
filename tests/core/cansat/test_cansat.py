@@ -35,6 +35,14 @@ class LinkedDataModel(LinkedDataModelBase):
     @cached_loggable
     def altitude(self):
         return press2alti(self.press, self.temp)
+    
+    
+class TestNode0(Node):
+    
+    model = None
+    
+    def judge(self, data) -> bool:
+        return True
 
 
 class TestNode1(Node):
@@ -89,7 +97,8 @@ class TestCanSat(unittest.TestCase):
         self.slogger.setFileHandler()
         self.manager = ComponentManager(self.dlogger, self.slogger, recursive=True)
                 
-        context = Context({TestNode1: {True: TestNode2, False: TestNode1},
+        context = Context({TestNode0: {True: TestNode1, False: TestNode0},
+                           TestNode1: {True: TestNode2, False: TestNode1},
                            TestNode2: {True: None, False: TestNode2}},
                            start=TestNode1)
 
