@@ -273,7 +273,8 @@ class Im920(TransceiverBase):
     
     def _recv_separate_type(self) -> Tuple[Enum, bytes]:
         # remove terminator
-        raw = self._handler.readline(end=self.Packet.TERMINATOR.value, timeout=0.5)[:-2]
+        # timeout is for waiting response from the device
+        raw = self._handler.readline(end=self.Packet.TERMINATOR.value, timeout=0.2)[:-2]
         
         if self.DataType.EVIDENCE.value in raw:
             return (self.DataType.TRANSMIT, raw)
