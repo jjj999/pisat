@@ -13,6 +13,7 @@ TODO
 from collections import deque
 from enum import Enum, auto
 import codecs
+import time
 from typing import Deque, Optional, Set, Tuple, Union
 
 from pisat.handler.pyserial_serial_handler import PyserialSerialHandler
@@ -21,7 +22,7 @@ from pisat.util.deco import cached_property
 
 
 class Im920(TransceiverBase):
-    
+        
     class DataType(Enum):
         TRANSMIT = auto()
         CONFIG = auto()
@@ -31,7 +32,7 @@ class Im920(TransceiverBase):
         
         MAX = 64
         
-        TERMINATOR = "\r\n".encode("ascii")
+        TERMINATOR = b"\r\n"
         LEN_TERMINATOR = 2
         
         ENCODING_BASE = "ascii"
@@ -196,20 +197,7 @@ class Im920(TransceiverBase):
     
     @classmethod
     def decode(cls, data: Union[bytes, bytearray]) -> str:
-        """Decode bytes into str with certain encoding.
-
-        Parameters
-        ----------
-            data : Union[bytes, bytearray]
-                Data to be decoded.
-
-        Returns
-        -------
-            str
-                Data decoded.
-        """
-        data_ascii = codecs.decode(bytes(data), cls.Packet.ENCODING_TRANSMIT.value)
-        return data_ascii.decode()
+        return data.decode()
     
     @classmethod
     def decode_addr(cls, data: Union[bytes, bytearray]) -> Tuple[str]:
@@ -285,7 +273,7 @@ class Im920(TransceiverBase):
     
     def _recv_separate_type(self) -> Tuple[Enum, bytes]:
         # remove terminator
-        raw = self._handler.readline(end=self.Packet.TERMINATOR.value)[:-1]
+        raw = self._handler.readline(end=self.Packet.TERMINATOR.value, timeout=0.5)[:-2]
         
         if self.DataType.EVIDENCE.value in raw:
             return (self.DataType.TRANSMIT, raw)
@@ -294,7 +282,7 @@ class Im920(TransceiverBase):
         
     def _send_formatted(self, command: str, data: bytes = b'') -> None:
         formatted = bytearray()
-        formatted.extend(command.encode(self.Packet.ENCODING_BASE.value))
+        formatted.extend(command.encode())
         formatted.extend(data)
         formatted.extend(self.Packet.TERMINATOR.value)
 
@@ -308,8 +296,6 @@ class Im920(TransceiverBase):
         if len(addr) == 3:
             id = (addr[1], )
             self._buf.appendleft((id, transmit))
-        else:
-            print(addr)
         
     def _update_buf(self) -> None:
         while self._handler.counts_readable:
@@ -323,9 +309,6 @@ class Im920(TransceiverBase):
         self._send_formatted(command)
         
         def get_result() -> bytes:
-            while not self._handler.counts_readable:
-                pass
-            
             dtype, data = self._recv_separate_type()
             if dtype == self.DataType.CONFIG:
                 return data
@@ -333,7 +316,8 @@ class Im920(TransceiverBase):
                 self._add_buf(data)
                 get_result()
                 
-        return get_result()
+        data = get_result()
+        return data.decode()
     
     def _set_params(self, command: str, value: bytes = b''):
         self._send_formatted(self.Command.ENABLE_WRITE_PARAM.value)
@@ -345,12 +329,10 @@ class Im920(TransceiverBase):
         self._send_formatted(self.Command.READ_RECEIVE_ID.value)
         
         def parse_result():
-            while not self._handler.counts_readable:
-                pass
             dtype, data = self._recv_separate_type()
             if dtype == self.DataType.CONFIG:
                 if len(data) == self.Packet.LEN_REC_ID.value:
-                    self._rec_id.add(data)
+                    self._rec_id.add(data.decode())
                     parse_result()
                 else:
                     pass
@@ -416,8 +398,8 @@ class Im920(TransceiverBase):
         return self._get_params(self.Command.READ_PRODUCT_VERSION.value)
         
     @cached_property
-    def baud_rate(self):
-        return self.Baudrate.RATE_19200.value
+    def baudrate(self):
+        return self._handler.baudrate
     
     @cached_property
     def sleep_time(self):

@@ -52,15 +52,15 @@ def test_non_socket():
     
 
 def test_socket():
-    handler1 = PyserialSerialHandler("/dev/ttyUSB0", baudrate=19200)
-    handler2 = PyserialSerialHandler("/dev/ttyUSB1", baudrate=19200)
+    handler1 = PyserialSerialHandler("/dev/ttyUSB0", baudrate=19200, read_timeout=0.1)
+    handler2 = PyserialSerialHandler("/dev/ttyUSB1", baudrate=19200, read_timeout=0.1)
 
     im920_1 = Im920(handler1, name="im920_1")
     im920_2 = Im920(handler2, name="im920_2")
     im920_1.clear_buf()
     im920_2.clear_buf()
     
-    address_1 = ("37B6", )
+    address_1 = ("2785", )
     address_2 = ("1CD2", )
     
     transceiver_1 = SocketTransceiver(im920_1)
@@ -94,18 +94,18 @@ def test_socket_nonblock():
     im920_1.clear_buf()
     im920_2.clear_buf()
     
-    address_1 = ("37B6", )
+    address_1 = ("2785", )
     address_2 = ("1CD2", )
     
-    transceiver_1 = SocketTransceiver(im920_1, period=0.1)
-    transceiver_2 = SocketTransceiver(im920_2, period=0.1)
+    transceiver_1 = SocketTransceiver(im920_1, period=0.1, certain=True)
+    transceiver_2 = SocketTransceiver(im920_2, period=0.1, certain=True)
     
     socket_1 = transceiver_1.create_socket(address_2)
     socket_2 = transceiver_2.create_socket(address_1)
     
-    for _ in range(10):
-        socket_1.send(im920_1.encode("Hello World " * 10))
-    socket_1.send(im920_1.encode("Hello World " * 10))
+    socket_1.send(im920_1.encode("Hello World " * 10), blocking=False)
+    print("blocking...")
+    sleep(5)
     
     count = 0
     while True:
@@ -159,4 +159,4 @@ def test_socket_recver():
                     
     
 if __name__ == "__main__":
-    test_socket_sender()
+    test_socket_nonblock()

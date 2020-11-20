@@ -189,7 +189,7 @@ class CommSocket(Component):
             CommSocket.period property as the parameter of period.
             
             If the 'blocking' is False, then this method executes 
-            task of sending in another method.
+            the task of sending in another thread.
             
             If certain is None, then the method uses the value of 
             CommSocket.certain property as the parameter of certain.
@@ -223,7 +223,7 @@ class CommSocket(Component):
             CommSocket.period property as the parameter of period.
             
             If the 'blocking' is False, then this method executes 
-            task of sending in another method.
+            the task of sending in another thread.
             
             If certain is None, then the method uses the value of 
             CommSocket.certain property as the parameter of certain.

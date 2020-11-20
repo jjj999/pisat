@@ -415,7 +415,7 @@ class SocketTransceiver(TransceiverBase):
             flushed when the 'socket' is given.
             
             If the 'blocking' is False, then this method executes 
-            task of sending in another method.
+            the task of sending in another thread.
             
             If period is None, then the method uses the value of 
             SocketTransceiver.period property as the parameter of period.
