@@ -301,14 +301,14 @@ class Im920(TransceiverBase):
         addr = self.decode_addr(addr_raw)
         if len(addr) == 3:
             id = (addr[1], )
-            self._buf.appendleft((id, transmit))
+            self._buf.appendleft((id, self.decode2utf8(transmit)))
         
     def _update_buf(self) -> None:
         while self._handler.counts_readable:
             dtype, data = self._recv_separate_type()
             if dtype == self.DataType.CONFIG:
                 continue
-            self._add_buf(self.decode2utf8(data))
+            self._add_buf(data)
     
     def _get_params(self, command: str) -> str:
         self._update_buf()
