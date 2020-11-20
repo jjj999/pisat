@@ -109,7 +109,7 @@ class GGAModel(NMEAModelBase):
     
     @time_utc.formatter
     def time_utc(self):
-        return self.format_time_utc(self.publisher_name, self._time_utc)
+        return self.format_time_utc(self.publisher, self._time_utc)
     
     @loggable
     def latitude(self):
@@ -184,7 +184,7 @@ class GLLModel(NMEAModelBase):
     
     @time_utc.formatter
     def time_utc(self):
-        return self.format_time_utc(self.publisher_name, self._time_utc)
+        return self.format_time_utc(self.publisher, self._time_utc)
     
     @loggable
     def status(self):
@@ -213,7 +213,7 @@ class GSAModel(NMEAModelBase):
     
     @mode.formatter
     def mode(self):
-        return {f"{self.publisher_name}-GSA_mode": self._mode}
+        return {f"{self.publisher}-GSA_mode": self._mode}
     
     @loggable
     def fix_type(self):
@@ -221,7 +221,7 @@ class GSAModel(NMEAModelBase):
     
     @fix_type.formatter
     def fix_type(self):
-        return {f"{self.publisher_name}-GSA_fix_type": self._fix_type}
+        return {f"{self.publisher}-GSA_fix_type": self._fix_type}
     
     @loggable
     def satellite_id(self):
@@ -229,7 +229,7 @@ class GSAModel(NMEAModelBase):
     
     @satellite_id.formatter
     def satellite_id(self):
-        names = [f"{self.publisher_name}-satellite_id_{num}" for num in range(1, 13)]                
+        names = [f"{self.publisher}-satellite_id_{num}" for num in range(1, 13)]                
         return {name: val for name, val in zip(names, self._satellite_id)}
     
     @loggable
@@ -252,7 +252,7 @@ class GSVModel(NMEAModelBase):
     
     class SatelliteProperty:
         
-        def __init__(self, id: str, elev: str, azim: str, SNR: str) -> None:
+        def __init__(self, id: str = "", elev: str = "", azim: str = "", SNR: str = "") -> None:
             self._id = empty_None(id, int)
             self._elev = empty_None(elev, int)
             self._azim = empty_None(azim, int)
@@ -295,12 +295,20 @@ class GSVModel(NMEAModelBase):
         # NOTE a length of the GSV format is changable. 
         if len(fields) > 8:
             self._satellite_1 = self.SatelliteProperty(fields[4], fields[5], fields[6], fields[7])
+        else:
+            self._satellite_1 = self.SatelliteProperty()
         if len(fields) > 12:
             self._satellite_2 = self.SatelliteProperty(fields[8], fields[9], fields[10], fields[11])
+        else:
+            self._satellite_2 = self.SatelliteProperty()
         if len(fields) > 16:
             self._satellite_3 = self.SatelliteProperty(fields[12], fields[13], fields[14], fields[15])
+        else:
+            self._satellite_3 = self.SatelliteProperty()
         if len(fields) > 20:
             self._satellite_4 = self.SatelliteProperty(fields[16], fields[17], fields[18], fields[19])
+        else:
+            self._satellite_4 = self.SatelliteProperty()
         
     @loggable
     def num_message(self):
@@ -320,7 +328,7 @@ class GSVModel(NMEAModelBase):
     
     @satellite_1.formatter
     def satellite_1(self):
-        return self._satellite_1.format(self.publisher_name, "satellite1")
+        return self._satellite_1.format(self.publisher, "satellite1")
     
     @loggable
     def satellite_2(self):
@@ -328,7 +336,7 @@ class GSVModel(NMEAModelBase):
     
     @satellite_2.formatter
     def satellite_2(self):
-        return self._satellite_2.format(self.publisher_name, "satellite2")
+        return self._satellite_2.format(self.publisher, "satellite2")
     
     @loggable
     def satellite_3(self):
@@ -336,7 +344,7 @@ class GSVModel(NMEAModelBase):
     
     @satellite_3.formatter
     def satellite_3(self):
-        return self._satellite_3.format(self.publisher_name, "satellite3")
+        return self._satellite_3.format(self.publisher, "satellite3")
     
     @loggable
     def satellite_4(self):
@@ -344,7 +352,7 @@ class GSVModel(NMEAModelBase):
     
     @satellite_4.formatter
     def satellite_4(self):
-        return self._satellite_4.format(self.publisher_name, "satellite4")
+        return self._satellite_4.format(self.publisher, "satellite4")
     
     
 class RMCModel(NMEAModelBase):
@@ -386,7 +394,7 @@ class RMCModel(NMEAModelBase):
     
     @time_utc.formatter
     def time_utc(self):
-        return self.format_time_utc(self.publisher_name, self._time_utc)
+        return self.format_time_utc(self.publisher, self._time_utc)
     
     @loggable
     def status(self):
@@ -414,7 +422,7 @@ class RMCModel(NMEAModelBase):
     
     @date_utc.formatter
     def date_utc(self):
-        return self.format_date_utc(self.publisher_name, self._date_utc)
+        return self.format_date_utc(self.publisher, self._date_utc)
     
     @loggable
     def mode(self):
@@ -485,7 +493,7 @@ class ZDAModel(NMEAModelBase):
     
     @time_utc.formatter
     def time_utc(self):
-        return self.format_time_utc(self.publisher_name, self._time_utc)
+        return self.format_time_utc(self.publisher, self._time_utc)
     
     @loggable
     def date_utc(self):
@@ -493,7 +501,7 @@ class ZDAModel(NMEAModelBase):
     
     @date_utc.formatter
     def date_utc(self):
-        return self.format_date_utc(self.publisher_name, self._date_utc)
+        return self.format_date_utc(self.publisher, self._date_utc)
     
     @loggable
     def local_zone_hour(self):
