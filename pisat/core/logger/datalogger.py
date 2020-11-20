@@ -139,9 +139,9 @@ class DataLogger(ComponentGroup, Generic[LinkedModel]):
             raise ValueError("The SensorGroup doesn't have the sensor.")
     
     def set_model(self, modelclass: Type[LinkedModel]) -> None:
-        if not issubclass(modelclass, LinkedDataModelBase):
+        if not issubclass(modelclass, LinkedDataModelBase) and modelclass is not None:
             raise TypeError(
-                "'modelclass' must be a subclass of LinkedDataModelBase."
+                "'modelclass' must be a subclass of LinkedDataModelBase or None."
             )
         self._modelclass = modelclass
                 
@@ -159,13 +159,13 @@ class DataLogger(ComponentGroup, Generic[LinkedModel]):
             pisat.core.logger.LogQueue : LogQueue.append is used inside.
             pisat.core.logger.RefQueue : RefQueue.append is used inside.
         """
+        data = [sensor.read() for sensor in self._sensors]
+        self._que.append(*data)
+        
         if self._modelclass is None:
             raise AttributeError(
                 "No model has been set now."
             )
-
-        data = [sensor.read() for sensor in self._sensors]
-        self._que.append(*data)
         
         model = self._modelclass(self.name)
         model.sync(*data)
